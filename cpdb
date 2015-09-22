@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# We assume appropriate usernames are used in the form "username@host" in the *_HOST parameters if applicable.
+# We assume there is passwordless ssh-login set up for all involved accounts.
+
+# Host to fetch from
+SOURCE_HOST="eaw-test-ckan.eawag.wroot.emp-eaw.ch"
+SOURCE_USER="ckan"
+# Source absolute path to Filestore
+SOURCE_DIR="/var/lib/ckan/default"
+
+# Target host
+TARGET_HOST="localhost"
+#TARGET_USER="$USER"
+# Target absolute path to Filestore
+TARGET_DIR="/var/lib/ckan/"
+
+# Target database
+TARGET_DB="ckan_default"
+TARGET_DB_USER="ckan_default"
+# Source database
+SOURCE_DB="ckan_default"
+SOURCE_DB_USER="ckan_default"
+
+if [ -z "$SOURCE_HOST" ] || [ "$SOURCE_HOST" = "localhost" ]; then
+    SOURCE="$SOURCE_DIR"
+else
+    SOURCE="${SOURCE_USER}@${SOURCE_HOST}:${SOURCE_DIR}"
+fi
+
+if [ -z "$TARGET_HOST" ] || [ "$TARGET_HOST" = "localhost" ]; then
+    TARGET="$TARGET_DIR"
+else
+    TARGET="${TARGET_USER}@${TARGET_HOST}:${TARGET_DIR}"
+fi
+
+fetch_filestore() {
+    cmd="rsync -rlptv ${SOURCE} ${TARGET}"
+    echo $cmd
+    eval $cmd
+}
+
+cp_db() {
+    pg_dump -h ${SOURCE_HOST} -U ${SOURCE_DB_USER} -w -Fc ${SOURCE_DB_NAME} |pg_restore -h $TARGET_HOST -U ${SOURCE_DB_USER} -d $TARGET_DB -w
+}
+
+cp_db
+#fetch_filestore
