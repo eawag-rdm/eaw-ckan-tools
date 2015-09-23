@@ -1,7 +1,11 @@
 #!/bin/bash
 
+source "${HOME}/ckan/lib/default/bin/activate"
+
 # We assume appropriate usernames are used in the form "username@host" in the *_HOST parameters if applicable.
 # We assume there is passwordless ssh-login set up for all involved accounts.
+
+TMPDIR="/tmp"
 
 # Host to fetch from
 SOURCE_HOST="eaw-test-ckan.eawag.wroot.emp-eaw.ch"
@@ -22,6 +26,7 @@ TARGET_DB_USER="ckan_default"
 SOURCE_DB="ckan_default"
 SOURCE_DB_USER="ckan_default"
 
+# construct SOURCE and TARGEt for rsync
 if [ -z "$SOURCE_HOST" ] || [ "$SOURCE_HOST" = "localhost" ]; then
     SOURCE="$SOURCE_DIR"
 else
@@ -40,9 +45,31 @@ fetch_filestore() {
     eval $cmd
 }
 
-cp_db() {
-    pg_dump -h ${SOURCE_HOST} -U ${SOURCE_DB_USER} -w -Fc ${SOURCE_DB_NAME} |pg_restore -h $TARGET_HOST -U ${SOURCE_DB_USER} -d $TARGET_DB -w
+db_dump_remote() {
+    pg_dump -h "$SOURCE_HOST" -U "$SOURCE_DB_USER" "$SOURCE_DB" > "${TMPDIR}/ckan_dump.tmp"
 }
 
-cp_db
-#fetch_filestore
+db_reset_local() {
+    dropdb -h "$TARGET_HOST" -U "$TARGET_DB_USER" "$TARGET_DB"
+    createdb -h "$TARGET_HOST" -U postgres -O "$TARGET_DB_USER" "$TARGET_DB" -E utf-8
+}
+
+db_clean_local() {
+    paster --plugin=ckan db clean -c /etc/ckan/default/development.ini
+}
+
+db_load() {
+    paster --plugin=ckan db load -c /etc/ckan/default/development.ini  "${TMPDIR}/ckan_dump.tmp"
+    rm "${TMPDIR}/ckan_dump.tmp"
+}
+
+ckan_sync() {
+    db_dump_remote
+    db_reset_local
+    #db_clean_local
+    db_reset_local
+    db_load
+    fetch_filestore
+}
+
+ckan_sync
