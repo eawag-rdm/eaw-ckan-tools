@@ -54,18 +54,32 @@ frontend-tools() {
     deactivate
 }
 
-# ckan_setup() {
-#     source /usr/lib/ckan/default/bin/activate
-#     cd /usr/lib/ckan/default/src/ckan
-#     python setup.py develop
-#     deactivate
-# }
-
+git-setup() {
+    source /usr/lib/ckan/default/bin/activate
+    cd /usr/lib/ckan/default/src/ckan/
+    git checkout release-v2.4-latest
+    git branch -m master ckan_master
+    git remote rename origin upstream
+    git remote add origin git@github.com:eawag-rdm/eawag-ckan.git
+    git remote add ckan-fork git@github.com:eawag-rdm/ckan.git
+    git fetch origin
+    git branch master origin/master
+    git checkout master
+    git config --unset remote.upstream.fetch 
+    git config --add remote.upstream.fetch +refs/heads/release-v2.4-latest:refs/remotes/upstream/release-v2.4-latest
+    git config --add remote.upstream.fetch +refs/heads/master:refs/remotes/upstream/master
+    git config --unset remote.ckan-fork.fetch
+    git config --add remote.ckan-fork.fetch +refs/heads/master:refs/remotes/ckan-fork/master
+    git config --add remote.ckan-fork.push +refs/heads/ckan_master:refs/heads/master
+    git config --add branch.ckan_master.pushremote ckan-fork
+    git config --add branch.release-v2.4-latest.pushremote origin
+    deactivate
+}
 
 fs_setup
 mk_virtenv
 install_src
 py-requirements
 frontend-tools
-
+git-setup
 
