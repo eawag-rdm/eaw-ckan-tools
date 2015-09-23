@@ -1,0 +1,12 @@
+#!/bin/bash
+
+parent=$1
+if [ "$parent" == "" ]; then
+    echo "usage: ck-switch SOURCEDIR"
+    exit 2
+fi
+
+sudo rm /usr/lib/ckan
+sudo rm /etc/ckan
+sudo ln -s ~/${parent}/lib /usr/lib/ckan    
+sudo ln -s ~/${parent}/etc /etc/ckan
