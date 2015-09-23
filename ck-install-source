@@ -6,7 +6,6 @@ if [ "$parent" == "" ]; then
     exit 2
 fi
 
-
 fs_setup() {
     mkdir -p ~/${parent}/lib   
     mkdir -p ~/${parent}/etc
@@ -22,7 +21,6 @@ fs_setup() {
     sudo chown `whoami` /etc/ckan/default
     cp /etc/ckan-development_ini-template /etc/ckan/default/development.ini
 }
-
 
 mk_virtenv() {
     virtualenv --no-site-packages /usr/lib/ckan/default
@@ -74,6 +72,16 @@ git-setup() {
     git config --add branch.ckan_master.pushremote ckan-fork
     git config --add branch.release-v2.4-latest.pushremote origin
     deactivate
+
+# ckan_setup() {
+#     source /usr/lib/ckan/default/bin/activate
+#     cd /usr/lib/ckan/default/src/ckan
+#     python setup.py develop
+#     deactivate
+# }
+
+get_eaw-tools() {
+    git clone git@github.com:eawag-rdm/eaw-tools.git /usr/lib/ckan/default/src/
 }
 
 fs_setup
@@ -82,4 +90,5 @@ install_src
 py-requirements
 frontend-tools
 git-setup
+get_eaw-tools
 
