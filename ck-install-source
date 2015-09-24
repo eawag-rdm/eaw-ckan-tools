@@ -107,6 +107,13 @@ install-extensions() {
     cd ckanext-spatial
     python setup.py develop
     pip install -r pip-requirements.txt
+    #
+    cd  /usr/lib/ckan/default/src
+    git clone git@github.com:ckan/ckanext-geoview.git
+    cd ckanext-geoview
+    python setup.py develop
+    pip install -r pip-requirements.txt
+    #
     echo "Don't forget to activate the plugins in /etc/ckan/default/development.ini"
 
     deactivate
