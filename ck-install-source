@@ -7,19 +7,22 @@ if [ "$parent" == "" ]; then
 fi
 
 fs_setup() {
-    mkdir -p ~/${parent}/lib   
-    mkdir -p ~/${parent}/etc
+    mkdir -p ${parent}/lib   
+    mkdir -p ${parent}/etc
     sudo rm /usr/lib/ckan
     sudo rm /etc/ckan
-    sudo ln -s ~/${parent}/lib /usr/lib/ckan    
-    sudo ln -s ~/${parent}/etc /etc/ckan
-    mkdir -p /etc/ckan/default
-    mkdir -p /usr/lib/ckan/default
-    #sudo chown `whoami` /usr/lib/ckan
-    sudo chown `whoami` /usr/lib/ckan/default
-    #sudo chown `whoami` /etc/ckan
-    sudo chown `whoami` /etc/ckan/default
+    sudo ln -s ${parent}/lib /usr/lib/ckan    
+    sudo ln -s ${parent}/etc /etc/ckan
+    mkdir /etc/ckan/default
+    mkdir /usr/lib/ckan/default
     cp /etc/ckan-development_ini-template /etc/ckan/default/development.ini
+    echo
+    echo "Links:" 
+    ls -lF /etc/ckan
+    ls -lF /usr/lib/ckan
+    echo
+    echo "Dev. Layout:"
+    tree $(realpath ${parent})
 }
 
 mk_virtenv() {
@@ -72,7 +75,7 @@ git-setup() {
     git config --add branch.ckan_master.pushremote ckan-fork
     git config --add branch.release-v2.4-latest.pushremote origin
     deactivate
-
+}
 # ckan_setup() {
 #     source /usr/lib/ckan/default/bin/activate
 #     cd /usr/lib/ckan/default/src/ckan
@@ -85,10 +88,9 @@ get_eaw-tools() {
 }
 
 fs_setup
-mk_virtenv
-install_src
-py-requirements
-frontend-tools
-git-setup
-get_eaw-tools
-
+# mk_virtenv
+# install_src
+# py-requirements
+# frontend-tools
+# git-setup
+# get_eaw-tools
