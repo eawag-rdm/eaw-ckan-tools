@@ -57,6 +57,7 @@ py-requirements() {
 }
 
 frontend-tools() {
+    
     source /usr/lib/ckan/default/bin/activate
     cd /usr/lib/ckan/default/src/ckan/
     npm install less@1.7.5 nodewatch
