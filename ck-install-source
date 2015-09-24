@@ -3,6 +3,7 @@
 if [[ $# -ne 2 || "$@" =~ .*-h.* || "$@" =~ .*--help.* ]]; then
     echo "Usage: ck-install-source LOCAL-SOURCEDIR GIT-URL[@TAG]"
     echo "Example: ck-install-source ~/ckan https://github.com/ckan/ckan.git"
+    echo "Example: ck-install-source ~/Ckan/ckan git@github.com:eawag-rdm/eawag-ckan.git"
     exit 1
 else
     parent="$1"
@@ -95,10 +96,28 @@ git-setup() {
     deactivate
 }
 
+install-extensions() {
+    echo "Installing extensions"
+    echo
+    source /usr/lib/ckan/default/bin/activate
+    cd /usr/lib/ckan/default/src
+    # some missing here
+    #
+    git clone git@github.com:eawag-rdm/ckanext-spatial.git
+    cd ckanext-spatial
+    python setup.py develop
+    pip install -r pip-requirements.txt
+    echo "Don't forget to activate the plugins in /etc/ckan/default/development.ini"
+
+    deactivate
+}
+
+
 fs_setup
 mk_virtenv
 install_src
 py-requirements
 frontend-tools
 git-setup
+install-extensions
 
