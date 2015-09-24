@@ -95,10 +95,10 @@ git-setup() {
     deactivate
 }
 
-# fs_setup
-# mk_virtenv
-# install_src
-# py-requirements
-# frontend-tools
-# git-setup
+fs_setup
+mk_virtenv
+install_src
+py-requirements
+frontend-tools
+git-setup
 
