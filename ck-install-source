@@ -48,6 +48,8 @@ install_src() {
 }
 
 py-requirements() {
+    echo "Installing CKAN Python requirements into virtualenv"
+    echo
     source /usr/lib/ckan/default/bin/activate
     pip install -r /usr/lib/ckan/default/src/ckan/requirements.txt
     pip install -r /usr/lib/ckan/default/src/ckan/dev-requirements.txt
@@ -93,10 +95,10 @@ get_eaw-tools() {
     git clone git@github.com:eawag-rdm/eaw-tools.git /usr/lib/ckan/default/src/
 }
 
-fs_setup
-mk_virtenv
-install_src
-# py-requirements
+# fs_setup
+# mk_virtenv
+# install_src
+py-requirements
 # frontend-tools
 # git-setup
 # get_eaw-tools
