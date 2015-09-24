@@ -1,9 +1,12 @@
 #!/bin/bash
 
-parent=$1
-if [ "$parent" == "" ]; then
-    echo "usage: ck-install-source SOURCEDIR"
-    exit 2
+if [[ $# -ne 2 || "$@" =~ .*-h.* || "$@" =~ .*--help.* ]]; then
+    echo "Usage: ck-install-source LOCAL-SOURCEDIR GIT-URL[@TAG]"
+    echo "Example: ck-install-source ~/ckan https://github.com/ckan/ckan.git"
+    exit 1
+else
+    parent="$1"
+    gitsrc="$2"
 fi
 
 fs_setup() {
@@ -27,6 +30,8 @@ fs_setup() {
 }
 
 mk_virtenv() {
+    echo Installing the virtual environment:
+    echo
     virtualenv --no-site-packages /usr/lib/ckan/default
     source /usr/lib/ckan/default/bin/activate
     pip install pip-tools
@@ -34,9 +39,10 @@ mk_virtenv() {
 }
 
 install_src() {
-    #git clone git@github.com:ckan/ckan.git /usr/lib/ckan/default/src/ckan
     source /usr/lib/ckan/default/bin/activate
-    pip install -e 'git+https://github.com/ckan/ckan.git#egg=ckan'
+    echo "Installing source from ${gitsrc} ..."
+    echo
+    pip install -vv -e "git+${gitsrc}#egg=ckan"
     ln -s /usr/lib/ckan/default/src/ckan/who.ini /etc/ckan/default/who.ini
     deactivate
 }
@@ -87,9 +93,9 @@ get_eaw-tools() {
     git clone git@github.com:eawag-rdm/eaw-tools.git /usr/lib/ckan/default/src/
 }
 
-# fs_setup
+fs_setup
 mk_virtenv
-# install_src
+install_src
 # py-requirements
 # frontend-tools
 # git-setup
