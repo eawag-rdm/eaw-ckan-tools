@@ -57,7 +57,8 @@ py-requirements() {
 }
 
 frontend-tools() {
-    
+    echo "Installing frontend-tools ..."
+    echo
     source /usr/lib/ckan/default/bin/activate
     cd /usr/lib/ckan/default/src/ckan/
     npm install less@1.7.5 nodewatch
@@ -99,7 +100,7 @@ get_eaw-tools() {
 # fs_setup
 # mk_virtenv
 # install_src
-py-requirements
+# py-requirements
 # frontend-tools
 # git-setup
 # get_eaw-tools
