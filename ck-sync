@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "${HOME}/ckan/lib/default/bin/activate"
+source "/usr/lib/ckan/default/bin/activate"
 
 # We assume appropriate usernames are used in the form "username@host" in the *_HOST parameters if applicable.
 # We assume there is passwordless ssh-login set up for all involved accounts.
@@ -66,7 +66,7 @@ db_load() {
 ckan_sync() {
     db_dump_remote
     db_reset_local
-    #db_clean_local
+    db_clean_local
     db_reset_local
     db_load
     fetch_filestore
