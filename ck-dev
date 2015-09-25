@@ -1,4 +1,5 @@
 #!/bin/bash
-
+cd /usr/lib/ckan/default/src/ckan
+git checkout master
 xfce4-terminal -T less -e "bash -c \"source /usr/lib/ckan/default/bin/activate; cd /usr/lib/ckan/default/src/ckan; ./bin/less\"" --tab -T server -e "bash -c \"source /usr/lib/ckan/default/bin/activate; paster --plugin=ckan serve --reload /etc/ckan/default/development.ini\""
 
