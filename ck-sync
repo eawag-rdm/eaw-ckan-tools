@@ -40,13 +40,19 @@ else
 fi
 
 fetch_filestore() {
+    echo "fetching Filestore:"
+    echo
     cmd="rsync -rlptv ${SOURCE} ${TARGET}"
     echo $cmd
     eval $cmd
+    echo
 }
 
 db_dump_remote() {
-    pg_dump -h "$SOURCE_HOST" -U "$SOURCE_DB_USER" "$SOURCE_DB" > "${TMPDIR}/ckan_dump.tmp"
+    echo "dumping database $SOURCE_DB on $SOURCE_HOST:"
+    echo
+    pg_dump -v -h "$SOURCE_HOST" -U "$SOURCE_DB_USER" "$SOURCE_DB" > "${TMPDIR}/ckan_dump.tmp"
+    echo
 }
 
 db_reset_local() {
@@ -55,19 +61,28 @@ db_reset_local() {
 }
 
 db_clean_local() {
+    echo "cleaning local CKAN database:"
+    echo
+    source /usr/lib/ckan/default/bin/activate
     paster --plugin=ckan db clean -c /etc/ckan/default/development.ini
+    deactivate
+    echo
 }
 
 db_load() {
+    echo "loading ${TMPDIR}/ckan_dump.tmp into local CKAN database:"
+    echo
+    source /usr/lib/ckan/default/bin/activate
     paster --plugin=ckan db load -c /etc/ckan/default/development.ini  "${TMPDIR}/ckan_dump.tmp"
     rm "${TMPDIR}/ckan_dump.tmp"
+    deactivate
+    echo
 }
 
 ckan_sync() {
     db_dump_remote
-    db_reset_local
-    #db_clean_local
-    db_reset_local
+    db_clean_local
+#    db_reset_local
     db_load
     fetch_filestore
 }
