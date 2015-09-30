@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# check whether we are in a virtualenv
+python -c 'import sys; print(sys.real_prefix)' 2>61 >/dev/null && INENV=1 || INENV=0
+
+if [[ "$INENV" == 0 ]]; then
+    echo "activate CKAN virtualenv first!"
+    exit 2
+fi
+if [[ "$#" != 1 ]]; then
+    echo "Usage: ck-test-ext <extname>"
+    exit 2
+fi
+
+extname=$1
+testdir="/usr/lib/ckan/default/src/ckanext-$extname"
+curdir=`pwd`
+cd $testdir
+
+CKAN_SQLALCHEMY_URL=`cat /etc/ckan/default/development.ini |grep sqlalchemy.url |sed 's/^.*\(postgresql:\/\/.*\)$/\1/'`
+CKAN_SQLALCHEMY_URL=$CKAN_SQLALCHEMY_URL nosetests --ckan --with-pylons=test.ini ckanext/$extname/tests/ 
+
+cd $curdir
+
