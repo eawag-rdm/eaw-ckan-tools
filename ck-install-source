@@ -1,6 +1,13 @@
 #!/bin/bash
 
-if [[ $# -ne 2 || "$@" =~ .*-h.* || "$@" =~ .*--help.* ]]; then
+
+#if [[ $# -ne 2 || "$@" =~ .*-h.* || "$@" =~ .*--help.* ]]; then
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    usage
+elif [[ "$1" == "only_extensions" ]]; then
+    install-extensions
+
+    elif
     echo "Usage: ck-install-source LOCAL-SOURCEDIR GIT-URL[@TAG]"
     echo "Example: ck-install-source ~/ckan https://github.com/ckan/ckan.git"
     echo "Example: ck-install-source ~/Ckan/ckan git@github.com:eawag-rdm/eawag-ckan.git"
