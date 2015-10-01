@@ -10,6 +10,9 @@ else
     gitsrc="$2"
 fi
 
+PLUGINS="ckanext-eawag ckanext-eawag_theme ckanext-hidegroups ckanext-scheming datapusher ckanapi ckanext-geoview ckanext-hierarchy ckanext-spatial"
+PLUGINREPO="https://github.com/eawag-rdm"
+
 fs_setup() {
     mkdir -p ${parent}/lib   
     mkdir -p ${parent}/etc
@@ -100,31 +103,24 @@ install-extensions() {
     echo "Installing extensions"
     echo
     source /usr/lib/ckan/default/bin/activate
-    cd /usr/lib/ckan/default/src
-    # some missing here
-    #
-    git clone git@github.com:eawag-rdm/ckanext-spatial.git
-    cd ckanext-spatial
-    python setup.py develop
-    pip install -r pip-requirements.txt
-    #
-    cd  /usr/lib/ckan/default/src
-    git clone git@github.com:ckan/ckanext-geoview.git
-    cd ckanext-geoview
-    python setup.py develop
-    pip install -r pip-requirements.txt
-    #
+    for plugin in $PLUGINS; do
+	cd /usr/lib/ckan/default/src
+	echo "Installing ${PLUGINREPO}/${plugin}.git"
+	git clone ${PLUGINREPO}/${plugin}.git
+	cd $plugin
+	python setup.py develop
+	pip install -r requirements.txt || pip install -r pip-requirements.txt || echo "No requirements-file found."
+    done
     echo "Don't forget to activate the plugins in /etc/ckan/default/development.ini"
-
     deactivate
 }
 
 
-fs_setup
-mk_virtenv
-install_src
-py-requirements
-frontend-tools
-git-setup
+# fs_setup
+# mk_virtenv
+# install_src
+# py-requirements
+# frontend-tools
+# git-setup
 install-extensions
 
