@@ -58,6 +58,13 @@ db_dump_remote() {
 db_reset_local() {
     dropdb -h "$TARGET_HOST" -U "$TARGET_DB_USER" "$TARGET_DB"
     createdb -h "$TARGET_HOST" -U postgres -O "$TARGET_DB_USER" "$TARGET_DB" -E utf-8
+    sudo -u postgres psql -d $TARGET_DB -f /usr/share/postgresql/9.4/contrib/postgis-2.1/uninstall_postgis.sql
+    sudo -u postgres psql -d $TARGET_DB -f /usr/share/postgresql/9.4/contrib/postgis-2.1/postgis.sql
+    sudo -u postgres psql -d $TARGET_DB -f /usr/share/postgresql/9.4/contrib/postgis-2.1/spatial_ref_sys.sql
+    sudo -u postgres psql -d $TARGET_DB -c "ALTER VIEW geometry_columns OWNER TO $TARGET_DB_USER;"
+    sudo -u postgres psql -d $TARGET_DB -c "ALTER TABLE spatial_ref_sys OWNER TO $TARGET_DB_USER;"
+    sudo -u postgres psql -d $TARGET_DB -c "SELECT postgis_full_version()"
+    
 }
 
 db_clean_local() {
@@ -81,8 +88,8 @@ db_load() {
 
 ckan_sync() {
     db_dump_remote
+    db_reset_local
     db_clean_local
-    #db_reset_local
     db_load
     fetch_filestore
 }
