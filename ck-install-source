@@ -1,24 +1,17 @@
 #!/bin/bash
 
-
-#if [[ $# -ne 2 || "$@" =~ .*-h.* || "$@" =~ .*--help.* ]]; then
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    usage
-elif [[ "$1" == "only_extensions" ]]; then
-    install-extensions
-
-    elif
-    echo "Usage: ck-install-source LOCAL-SOURCEDIR GIT-URL[@TAG]"
-    echo "Example: ck-install-source ~/ckan https://github.com/ckan/ckan.git"
-    echo "Example: ck-install-source ~/Ckan/ckan git@github.com:eawag-rdm/eawag-ckan.git"
-    exit 1
-else
-    parent="$1"
-    gitsrc="$2"
-fi
-
 PLUGINS="ckanext-eawag ckanext-eawag_theme ckanext-hidegroups ckanext-scheming datapusher ckanapi ckanext-geoview ckanext-hierarchy ckanext-spatial"
 PLUGINREPO="https://github.com/eawag-rdm"
+
+usage() {
+    echo "Usage: ck-install-source onlyext"
+    echo "       ck-install-source <LOCAL-SOURCEDIR> <GIT-URL[@TAG]>"
+    echo "The first form installs only the extensions"
+    echo "Example: ck-install-source ~/ckan https://github.com/ckan/ckan.git"
+    echo "Example: ck-install-source ~/Ckan/ckan git@github.com:eawag-rdm/eawag-ckan.git"
+    echo
+    echo "Edit the source to adapt the plugins that shoall be installed"
+}
 
 fs_setup() {
     mkdir -p ${parent}/lib   
@@ -122,12 +115,23 @@ install-extensions() {
     deactivate
 }
 
-
-# fs_setup
-# mk_virtenv
-# install_src
-# py-requirements
-# frontend-tools
-# git-setup
-install-extensions
-
+echo "$*"
+if [[ "$*" =~ .*\ -h ]]; then
+    usage
+    exit 0
+elif [[ "$1" == "onlyext" ]]; then
+    install-extensions
+elif [[ $# -ne 2 ]]; then
+    usage
+    exit 1
+else
+    parent="$1"
+    gitsrc="$2"
+    fs_setup
+    mk_virtenv
+    install_src
+    py-requirements
+    frontend-tools
+    git-setup
+    install-extensions
+fi

@@ -82,7 +82,7 @@ db_load() {
 ckan_sync() {
     db_dump_remote
     db_clean_local
-#    db_reset_local
+    #db_reset_local
     db_load
     fetch_filestore
 }
