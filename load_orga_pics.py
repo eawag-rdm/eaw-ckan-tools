@@ -2,19 +2,32 @@ import requests
 import os
 import re
 import json
+import ckanapi
 
 host = "http://localhost:5000"
 apipath = host + "/api/3/action/"
 pic_dict = os.path.join(os.environ['HOME'], "Ckan/static/orga_pics")
-auth = {'Authorization': '298b9601-6693-4fc8-96ac-fc500e61b82f'}
 
+ckan = ckanapi.RemoteCKAN(host, apikey=apikey)
+organizations = ckan.action.organization_list()
+
+
+#################################################
+# TEST: new organization
+pic_url = os.path.join(pic_dict, 'Ecoimpact.jpg')
+
+ckan.action.organization_update(id='ecoimpact2', image_upload=open(pic_url))
+
+
+
+res = requests.post(url, json=datajson, headers=header, files=file)
 
 def match_orga2pics(pdict, olist):
     upd = []
     for o in organizations:
         for p in os.listdir(pic_dict):
             if os.path.splitext(p)[0] == o:
-                upd.append({'id': o, 'image_url': os.path.join(pic_dict, p)})
+                upd.append({'id': o, 'pic': os.path.join(pic_dict, p)})
     return(upd)
 
 
