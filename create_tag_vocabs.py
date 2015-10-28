@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/lib/ckan/default/bin/python
 
 ###############################################################
 #
