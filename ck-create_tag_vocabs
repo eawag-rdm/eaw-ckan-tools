@@ -85,9 +85,7 @@ if __name__ == '__main__':
     else:
         if not (vocabname and vocabdeffile):
             print("Too few arguments")
-            p
-        print(vocabname, vocabdeffile, clean, show)
-        sys.exit(0)
+            sys.exit(0)
         if clean:
             del_all_vocabs()
         new_vocab(vocabname, vocabdeffile)
