@@ -43,12 +43,16 @@ def new_vocab(vocab_name, tag_file):
         print("Created vocabulary {}:".format(vocab['name']))
         pp.pprint(vocab)
 
-def del_all_vocabs():
+def del_vocabs(vocabname="*"):
     vocabs = ckan.call_action('vocabulary_list')
-    vocabids = [x['id'] for x in vocabs]
+    if vocabname == "*":
+        vocabids = [x['id'] for x in vocabs]
+    else:
+        vocabids = [x['id'] for x in vocabs if x["name"] == vocabname]
     for id in vocabids:
         # delte all tags
         vocab = ckan.call_action('vocabulary_show', {'id': id})
+        print("Deleting vocabulary {}".format(vocab["name"]))
         for tid in [x['id'] for x in vocab['tags']]:
             ckan.call_action('tag_delete', {'id': tid, 'vocabulary_id': id})
         # delete vocabulary
@@ -64,29 +68,37 @@ def cli_parse():
     parser = argparse.ArgumentParser(description='Create tag-vocabulary')
     parser.add_argument('--clean', help='remove all tag-vocabularies first',
                         action='store_true')
+    parser.add_argument('--del', metavar="vocab_name",
+                        help="remove vocab_name", action='store')
     parser.add_argument('vocnam', metavar='vocabulary_name', nargs='?')
     parser.add_argument('vocdef', metavar='vocabuary_definition', nargs='?',
                         help='file containing a tag name in each line')
     parser.add_argument('--show', help='only show vocabularies',
                         action='store_true')
     args = vars(parser.parse_args())
-    if (not args['show']) and (not (args['vocnam'] and args['vocdef'])):
+    if (not (args['show'] or args['del'])) and (not (args['vocnam'] and args['vocdef'])):
         print("Too few arguments")
         parser.print_help()
         sys.exit(0)
-    return(args['vocnam'], args['vocdef'], args['clean'], args['show'])
+    return(args['vocnam'], args['vocdef'], args['clean'], args['show'], args['del'])
 
     
 if __name__ == '__main__':
-    vocabname, vocabdeffile, clean, show = cli_parse()
+    vocabname, vocabdeffile, clean, show, dele = cli_parse()
     if show:
         show_vocabs()
-        sys.exit(0)
-    else:
-        if not (vocabname and vocabdeffile):
-            print("Too few arguments")
-            sys.exit(0)
-        if clean:
-            del_all_vocabs()
+        ran = True
+    if dele:
+        del_vocabs(dele)
+        ran = True
+    if clean:
+        del_vocabs()
+        ran = True
+    if vocabname and vocabdeffile:
         new_vocab(vocabname, vocabdeffile)
+        print("Updated vocabularies:")
         show_vocabs()
+    elif not ran:
+        print("Too few arguments")
+        sys.exit(2)
+
