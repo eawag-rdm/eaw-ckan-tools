@@ -20,11 +20,6 @@ host = "http://localhost:5000"
 apikey = os.environ['CKAN_APIKEY_HVW_ADM']
 ckan = ckanapi.RemoteCKAN(host, apikey=apikey)
 
-# t = 'testtag1'
-# vocab = ckan.call_action('vocabulary_create', {'name': 'testvocanulary'})
-# ckan.call_action('tag_create', {'name': t, 'vocabulary_id': vocab['id']})
-
-
 # not used, currently
 def sanitize_name(name):
     name_san = re.sub('[^0-9a-zA-Z]+', '-', name).lower()
@@ -95,14 +90,15 @@ if __name__ == '__main__':
         ran = True
     if dele:
         del_vocabs(dele)
-        show_vocabs()
         ran = True
     if clean:
         del_vocabs()
         ran = True
-    if not (ran or (vocabname and vocabdeffile)):
-        print("Too few arguments")
-        sys.exit(0)
-    else:
+    if vocabname and vocabdeffile:
         new_vocab(vocabname, vocabdeffile)
+        print("Updated vocabularies:")
         show_vocabs()
+    elif not ran:
+        print("Too few arguments")
+        sys.exit(2)
+
