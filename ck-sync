@@ -9,6 +9,7 @@ TMPDIR="/tmp"
 
 # Host to fetch from
 SOURCE_HOST="eaw-test-ckan.eawag.wroot.emp-eaw.ch"
+
 SOURCE_USER="ckan"
 # Source absolute path to Filestore
 SOURCE_DIR="/var/lib/ckan/default"

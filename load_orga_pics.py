@@ -4,7 +4,8 @@ import re
 import json
 import ckanapi
 
-host = "http://localhost:5000"
+#host = "http://localhost:5000"
+host = "http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
 pic_dict = os.path.join(os.environ['HOME'], "Ckan/static/orga_pics")
 apikey = os.environ['CKAN_APIKEY_HVW_ADM']
 
