@@ -16,8 +16,9 @@ import ckanapi
 
 pp = PrettyPrinter(indent = 2)
 
-host = "http://localhost:5000"
-apikey = os.environ['CKAN_APIKEY_HVW_ADM']
+#host = "http://localhost:5000"
+host = "http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
+apikey = os.environ['CKAN_DEV1_APIKEY_HVW_ADM']
 ckan = ckanapi.RemoteCKAN(host, apikey=apikey)
 
 # not used, currently
@@ -64,6 +65,16 @@ def show_vocabs():
     # for voc in vocablist:
     #     ckan.call_api('vocabulary_show', voc['id'])
 
+def update_vocab(add_tag):
+    newtag = ckan.call_action('tag_create', {'name': add_tag[0],
+                                             'vocabulary_id': add_tag[1]})
+    print("Created new tag:")
+    pp.pprint(newtag)
+
+def delete_tag(del_tag):
+    ckan.call_action('tag_delete', {'id': del_tag[0],
+                                    'vocabulary_id': del_tag[1]})
+
 def cli_parse():
     parser = argparse.ArgumentParser(description='Create tag-vocabulary')
     parser.add_argument('--clean', help='remove all tag-vocabularies first',
@@ -75,16 +86,21 @@ def cli_parse():
                         help='file containing a tag name in each line')
     parser.add_argument('--show', help='only show vocabularies',
                         action='store_true')
+    parser.add_argument('--add-tag', help='new tag name', nargs=2,
+                        metavar=('TAGNAME', 'VOCAB_ID'))
+    parser.add_argument('--del-tag', help='delete tag', nargs=2,
+                        metavar=('TAGNAME', 'VOCAB_ID'))
+    
     args = vars(parser.parse_args())
-    if (not (args['show'] or args['del'])) and (not (args['vocnam'] and args['vocdef'])):
+    if (not (args['show'] or args['del'] or args['add_tag'] or args['del_tag'])) and (not (args['vocnam'] and args['vocdef'])):
         print("Too few arguments")
         parser.print_help()
         sys.exit(0)
-    return(args['vocnam'], args['vocdef'], args['clean'], args['show'], args['del'])
+    return(args['vocnam'], args['vocdef'], args['clean'], args['show'], args['del'], args['add_tag'], args['del_tag'])
 
     
 if __name__ == '__main__':
-    vocabname, vocabdeffile, clean, show, dele = cli_parse()
+    vocabname, vocabdeffile, clean, show, dele, add_tag, del_tag = cli_parse()
     if show:
         show_vocabs()
         ran = True
@@ -93,6 +109,12 @@ if __name__ == '__main__':
         ran = True
     if clean:
         del_vocabs()
+        ran = True
+    if add_tag:
+        update_vocab(add_tag)
+        ran = True
+    if del_tag:
+        delete_tag(del_tag)
         ran = True
     if vocabname and vocabdeffile:
         new_vocab(vocabname, vocabdeffile)
