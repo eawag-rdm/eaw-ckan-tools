@@ -16,9 +16,10 @@ import ckanapi
 
 pp = PrettyPrinter(indent = 2)
 
-#host = "http://localhost:5000"
-host = "http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
-apikey = os.environ['CKAN_DEV1_APIKEY_HVW_ADM']
+host = "http://localhost:5000"
+apikey = os.environ['CKAN_LOCAL_APIKEY_HVW_ADM']
+#host = "http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
+#apikey = os.environ['CKAN_DEV1_APIKEY_HVW_ADM']
 ckan = ckanapi.RemoteCKAN(host, apikey=apikey)
 
 # not used, currently
@@ -50,11 +51,14 @@ def del_vocabs(vocabname="*"):
         vocabids = [x['id'] for x in vocabs]
     else:
         vocabids = [x['id'] for x in vocabs if x["name"] == vocabname]
+    print("vocabids: {}".format(vocabids))
     for id in vocabids:
         # delte all tags
         vocab = ckan.call_action('vocabulary_show', {'id': id})
         print("Deleting vocabulary {}".format(vocab["name"]))
-        for tid in [x['id'] for x in vocab['tags']]:
+        for tid, name in [(x['id'], x['name']) for x in vocab['tags']]:
+            print("tid: {}".format(tid))
+            print("tag-name: {}".format(name))
             ckan.call_action('tag_delete', {'id': tid, 'vocabulary_id': id})
         # delete vocabulary
         ckan.call_action('vocabulary_delete', {'id': id})
