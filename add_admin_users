@@ -1,0 +1,15 @@
+#!/bin/bash
+
+base_url="http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch/api/3/action/"
+auth="Authorization:$CKAN_DEV1_APIKEY_HVW_ADM"
+
+action="member_delete"
+parameters="object=reichert object_type=user"
+
+orgas="ecological-modelling hydrological-modelling material-fluxes-in-the-anthroposphere mathematical-methods soil-groundwater-catchments water-environment-and-food-security"
+#systems-analysis-and-water-management
+
+for orga in $orgas; do
+    http POST ${base_url}${action} $auth $parameters id=$orga  
+done
+
