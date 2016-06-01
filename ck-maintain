@@ -1,0 +1,70 @@
+#!/bin/bash
+
+## HvW - 2016-06-02
+## Puts CKAN into mainenance mode by
+## putting the file "maintenance.html" into the default
+## document-root of nginx.
+##
+
+nginx_docuroot="/home/vonwalha/tmp"
+maintenance_page="maintenance.html"
+
+
+
+printhelp() {
+    cat <<EOF
+
+Usage: ck-maintain off|on TIME
+
+Switches maintenance modus for CKAN on or off. The maintenance - page to which
+users will be redirected contains the string TIME as the epected time
+when the service becomes available again.
+
+EOF
+}
+
+
+maintenance_page_path="${nginx_docuroot}/$maintenance_page"
+echo $maintenance_page_path
+echo $1
+echo $2
+
+if [[ $1 != "on" && $1 != "off" ]]; then
+    printhelp
+    exit 1
+fi
+if [[ $1 = "on" && $# != 2 ]]; then
+    printhelp
+    exit 1
+fi
+if [[ $1 = "off" && $# != 1 ]]; then
+    printhelp
+    exit 1
+fi
+if [[ $1 = "off" ]]; then
+    if [[ -f $maintenance_page_path ]];then
+	mv $maintenance_page_path ${maintenance_page_path}.inactive
+    else
+	echo "Maintenace mode seems to be off -- aborting."
+	exit 1
+    fi
+fi
+if [[ $1 = "on" ]]; then
+    if [[ ! -f "${maintenance_page_path}.inactive" ]]; then
+	echo "${maintenance_page_path}.inactive is missing -- aborting."
+	echo "Maybe maintenance mode is already on."
+	exit 1
+    fi
+    sed  -i 's/\(<!--UP_AGAIN-->\).*\(<!--\/UP_AGAIN-->\)/\1'"$2"'\2/' ${maintenance_page_path}.inactive && \
+    mv ${maintenance_page_path}.inactive ${maintenance_page_path}
+fi
+
+
+	   
+
+
+
+				   
+
+
+
