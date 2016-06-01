@@ -1,0 +1,68 @@
+#!/bin/bash
+
+## HvW - 2016-01-06
+## Dumps local ckan database
+## To be used by cron, to be run as root
+
+HOSTNAME=$(hostname)
+
+## Path to CKAN configuration file.
+
+#SOURCE_CONFIG="/etc/ckan/default/production.ini"
+SOURCE_CONFIG="/etc/ckan/default/development.ini"
+
+## Directory where the DB dump should be written
+## This has to be an absolute path.
+
+#DUMPDIR="/var/lib/ckan/default/dbdumps/"
+DUMPDIR="/data/ckan/dbdumps/"
+
+# checks whether Path to directors is an absolute path and ends with slash
+check_path() {
+    res=$1
+    if [ "${res:0:1}" != "/" ]; then
+	echo "DUMPDIR (\"$DUMPDIR\") needs to be an absolute path"
+	exit 1
+    fi
+    if [ "${res: -1}" != "/" ]; then
+	res=${res}/
+    fi
+    echo $res
+}
+
+# read DB configurations from ckan configuration file
+ckan_read_db_config() {
+    read SOURCE_DB_USER SOURCE_DB_PW SOURCE_DB <<<\
+	 $(grep sqlalchemy.url $SOURCE_CONFIG |\
+		  sed -n 's/^[^#]*postgresql:\/\/\(.*\):\(.*\)@localhost\/\(.*\)$/\1 \2 \3/p')
+}
+
+db_dump() {
+  echo "Dumping database $SOURCE_DB on $HOSTNAME to $HOSTNAME:$1"
+  PGPASSWORD=$SOURCE_DB_PW pg_dump -h localhost -U "$SOURCE_DB_USER" "$SOURCE_DB" > "$1"
+}
+
+check_success() {
+    if [[ -f "$DUMPFILE" && -s "$DUMPFILE" ]]; then
+	echo "CKAN db-dump succeeded"
+    else
+	echo "CKAN db-dump failed"
+	(echo "CKAN db-dump failed" 1>&2)
+    fi
+}
+
+
+DUMPDIR=$(check_path $DUMPDIR)
+DUMPFILE="${DUMPDIR}ckan_dump.sql"
+DUMPDIR_TMP="${DUMPDIR%/}_tmp/"
+DUMPFILE_TMP="${DUMPDIR_TMP}ckan_dump.sql"
+mkdir $DUMPDIR_TMP
+if [[ $? != 0 ]]; then
+    echo "$DUMPDIR_TMP already exists, aborting!" 1>&2; \
+    echo "$DUMPDIR_TMP already exists, aborting!"; \
+    exit 1
+fi
+ckan_read_db_config
+db_dump "$DUMPFILE_TMP"
+rdiff-backup "$DUMPDIR_TMP" "$DUMPDIR" && rm -rf "$DUMPDIR_TMP"
+check_success
