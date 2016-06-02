@@ -6,10 +6,8 @@
 ## document-root of nginx.
 ##
 
-nginx_docuroot="/home/vonwalha/tmp"
+nginx_docuroot="/usr/share/nginx/html"
 maintenance_page="maintenance.html"
-
-
 
 printhelp() {
     cat <<EOF
@@ -23,11 +21,7 @@ when the service becomes available again.
 EOF
 }
 
-
 maintenance_page_path="${nginx_docuroot}/$maintenance_page"
-echo $maintenance_page_path
-echo $1
-echo $2
 
 if [[ $1 != "on" && $1 != "off" ]]; then
     printhelp
@@ -58,13 +52,3 @@ if [[ $1 = "on" ]]; then
     sed  -i 's/\(<!--UP_AGAIN-->\).*\(<!--\/UP_AGAIN-->\)/\1'"$2"'\2/' ${maintenance_page_path}.inactive && \
     mv ${maintenance_page_path}.inactive ${maintenance_page_path}
 fi
-
-
-	   
-
-
-
-				   
-
-
-
