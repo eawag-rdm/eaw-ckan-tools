@@ -1,6 +1,8 @@
 #!/bin/bash
 
-PLUGINS="ckanext-eawag ckanext-eawag_theme ckanext-hidegroups ckanext-scheming datapusher ckanapi ckanext-geoview ckanext-hierarchy ckanext-spatial"
+PLUGINS="ckanext-eaw_theme ckanext_eaw_schema ckanext-eaw_vocabularies
+ckanext-scheming ckanext-reapeating ckanapi ckanext-hierarchy ckanext-spatial"
+
 PLUGINREPO="https://github.com/eawag-rdm"
 
 usage() {
@@ -127,11 +129,11 @@ elif [[ $# -ne 2 ]]; then
 else
     parent="$1"
     gitsrc="$2"
-    fs_setup
-    mk_virtenv
-    install_src
-    py-requirements
+    # fs_setup
+    # mk_virtenv
+    # install_src
+    # py-requirements
     frontend-tools
-    git-setup
-    install-extensions
+    # git-setup
+    # install-extensions
 fi
