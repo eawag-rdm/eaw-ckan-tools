@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+
+"""
+makes modifications to the controlled vocabulary (implemented as
+ckanext-scheming "choices")
+HvW - 2016-06-07
+"""
+
+import argparse
+import sys
+import json
+import pprint
+
+LOCAL_SCHEMA=("/usr/lib/ckan/default/src/ckanext-eaw_schema/ckanext/" +
+               "eaw_schema/eaw_schema_default.json")
+REMOTE_SCHEMA=("/usr/lib/ckan/default/src/ckanext-eaw_schema/ckanext/" +
+               "eaw_schema/eaw_schema_default.json")
+
+def parseargs():
+    
+    parser = argparse.ArgumentParser(description=
+                                     "Make modifications to the controlled "+
+                                     "vocabulary (implemented as "+
+                                     "ckanext-scheming \"choices\"")
+    parser.add_argument('host', help='the host of the CKAN instance (user@host.domain)')
+    parser.add_argument('field', help='the schema field to be modified')
+    parser.add_argument('--del', action='store_true', help='delete terms '+
+                        '(default is adding terms)')
+    parser.add_argument('--resource', action='store_true', help='action ' +
+                        'refers to resource field (default is dataset field)') 
+    parser.add_argument('terms', nargs='+', help='the terms to be added (removed)')
+
+    args=vars(parser.parse_args())
+    return(args)
+
+    # host = args["host"]
+    # field = args["field"]
+    # remove = args["del"]
+    # terms = args["term"]
+    # return((host, field, remove, terms))
+
+def load_schema(host):
+    if host == 'localhost':
+        with open(LOCAL_SCHEMA) as schemafile:
+            schema = json.load(schemafile)
+    else:
+        exit("remote execution not yet implemented")
+    return(schema)
+
+def update_field(schema, typ, field, remove):
+    def _get_val_index(val, choices):
+        idx = [x.get('value') for x in choices].index(val)
+        return(idx)
+    try:
+        f = [x for x in schema[typ] if x["field_name"] == field]
+    except KeyError:
+        exit("Could not find field \"{}\" in \"{}\"".format(field, typ))
+    if not f:
+        exit("Could not find field \"{}\" in \"{}\"".format(field, typ))
+    assert len(f) == 1
+    c = f[0]['choices']
+    
+    return(c)
+
+
+             
+        
+    
+
+
+        
+args = parseargs()
+print(args)
+typ = 'resource_fields' if args['resource'] else 'dataset_fields'
+print "typ: {}".format(typ)
+#host, field, remove, terms = ('localhost', 'variables', False, 'pH')
+# print(host, field, remove, terms)
+schema = load_schema(args['host'])
+#pprint.pprint(schema)
+f = update_field(schema, typ, args['field'], args['del'])
+pprint.pprint(f)
+
+
+
+
+ def _get_val_index(val, choices):
+    idx = [x.get('value') for x in choices].index(val)
+    return(idx)
+
+
+def test_get_val_idx(val):
+    choices = [{"value": x, "label": y} for x, y in [(str(z), z) for z in range(1,10)]]
+    print(choices)
+    print(_get_val_index(val, choices))
+    
+test_get_val_idx('2')
+
+
+
+    
