@@ -5,6 +5,8 @@ ckanext-scheming ckanext-reapeating ckanapi ckanext-hierarchy ckanext-spatial"
 
 PLUGINREPO="https://github.com/eawag-rdm"
 
+UPSTREAM_BRANCH="release-v2.5.2"
+
 usage() {
     echo "Usage: ck-install-source onlyext"
     echo "       ck-install-source <LOCAL-SOURCEDIR> <GIT-URL[@TAG]>"
@@ -77,21 +79,24 @@ git-setup() {
     source /usr/lib/ckan/default/bin/activate
     cd /usr/lib/ckan/default/src/ckan/
     # add remotes
-    git remote add ckan-fork git@github.com:eawag-rdm/ckan.git
+    git remote add origin git@github.com:eawag-rdm/eawag-ckan.git
     git remote add upstream git@github.com:ckan/ckan.git
     # configure remotes
-    git config --unset remote.ckan-fork.fetch
-    git config --add remote.ckan-fork.fetch +refs/heads/master:refs/remotes/ckan-fork/master
-    git config --add remote.ckan-fork.push +refs/heads/ckan_master:refs/heads/master
+    git config --unset remote.origin.fetch
+    git config --add remote.origin.fetch +refs/heads/master:refs/remotes/origin/master
+    git config --add remote.origin.push +refs/heads/master:refs/heads/master
     #
+
+
+    ##### CONTINUE HERE #######
     git config --unset remote.upstream.fetch 
-    git config --add remote.upstream.fetch +refs/heads/release-v2.4-latest:refs/remotes/upstream/release-v2.4-latest
-    git config --add remote.upstream.fetch +refs/heads/master:refs/remotes/upstream/master
+    git config --add remote.upstream.fetch +refs/heads/$UPSTREAM_BRANCH:refs/remotes/upstream/$UPSTREAM_BRANCH
+    git config --add remote.upstream.fetch +refs/heads/upstream_master:refs/remotes/upstream/upstream_master
     #
     # set up branches
     git fetch upstream
-    git checkout -b release-v2.4-latest upstream/release-v2.4-latest
-    git config --add branch.release-v2.4-latest.pushremote origin
+    git checkout -b $UPSTREAM_BRANCH upstream/$UPSTREAM_BRANCH
+    git config --add branch.$UPSTREAM_BRANCH.pushremote origin
     #
     git fetch upstream
     git checkout -b ckan_master upstream/master
