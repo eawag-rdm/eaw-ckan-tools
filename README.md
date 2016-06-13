@@ -28,3 +28,20 @@ TERM        the terms to be added (removed). Have the format "value,label"
   deletes them.
 </pre>
 
+## ck-maintain
+
+<pre>
+<b>Usage:</b> ck-maintain off|on TIME
+
+Switches maintenance modus for CKAN on or off. The maintenance-page, to which
+users will be redirected, contains the string TIME as the expected time
+when the service will become available again.
+
+<b>Note:</b>
+Here is an example for the maintenance-page:<a href="https://github.com/eawag-rdm/eaw-ckan-tools/blob/master/maintenance.html>maintenance.html</a>.
+That page has to be put in the nginx document-root: /usr/share/nginx/html.
+</pre>
+
+`codeexample`
+
+</pre>
