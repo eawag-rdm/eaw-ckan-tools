@@ -17,18 +17,30 @@ LOCAL_SCHEMA=("/usr/lib/ckan/default/src/ckanext-eaw_schema/ckanext/" +
                "eaw_schema/eaw_schema_default.json")
     
 def mkparser():
-    parser = argparse.ArgumentParser(description=
-                                     "Make modifications to the controlled "+
-                                     "vocabulary (implemented as "+
-                                     "ckanext-scheming \"choices\"")
-    parser.add_argument('field', help='the schema field to be modified')
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description=
+"""
+Make modifications to the controlled vocabulary \"field\"
+(implemented as ckanext-scheming "choices").
+""",                                  epilog=
+"""
+Examples:
+ck_choices.py variables "new_var_1,New Variable One" newvar2,"Another One"
+adds two new terms to the dataset_field "variables".
+
+ck_choices.py variables --del new_var_1 newvar2
+deletes them.
+"""
+    )
+    parser.add_argument('field', help='the schema field to be modified',
+                        metavar='FIELD')
     parser.add_argument('--del', action='store_true', help='delete terms '+
                         '(default is adding terms)')
     parser.add_argument('--resource', action='store_true', help='action ' +
                         'refers to resource field (default is dataset field)') 
     parser.add_argument('terms', nargs='+', help='the terms to be added '
                         +'(removed). Have the format "value,label" for adding,' +
-                        ' and "value" for removing')
+                        ' and "value" for removing', metavar='TERM')
     return(parser)
 
 
