@@ -20,7 +20,7 @@ def mkparser():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description=
 """
-Make modifications to the controlled vocabulary \"field\"
+Make modifications to the controlled vocabulary FIELD
 (implemented as ckanext-scheming "choices").
 """,                                  epilog=
 """
