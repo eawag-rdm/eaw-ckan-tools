@@ -6,6 +6,7 @@ Various CKAN-external bits and pieces. Varying degrees of documentation, general
 
 <pre>
 <b>usage:</b> ck_choices.py [-h] [--del] [--resource] FIELD TERM [TERM ...]
+
 Make modifications to the controlled vocabulary FIELD
 (implemented as ckanext-scheming "choices").
 
