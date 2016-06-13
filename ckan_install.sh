@@ -4,48 +4,37 @@
 ## Install CKAN development-environment
 ## Specifically for Debian stretch/testing
 
+source ./ckan_tools_lib.sh
+# This lib needs $LOGFILE defined"
+
 LOGFILE="./ckan_install_log.txt"
 SOURCE_PARENT="/home/hvwaldow/eawag/ckan"
-GIT_SOURCE="git@github.com:eawag-rdm/eawag-ckan.git"
-
-install_system_packages() {
-    sudo apt-get update &&\
-    # Python
-    sudo apt-get install -y python-dev &&\
-    sudo apt-get install -y python-pip &&\
-    sudo apt-get install -y python-virtualenv &&\
-    # Postgres
-    sudo apt-get install -y postgresql &&\
-    sudo apt-get install -y libpq-dev  &&\
-    # PostGIS
-    sudo apt-get install -y postgis  &&\
-    sudo apt-get install -y libxml2-dev &&\
-    sudo apt-get install -y libxslt1-dev &&\
-    sudo apt-get install -y libgeos-c1v5 &&\
-    # Git
-    sudo apt-get install -y git  &&\
-    # Java JRE for SOLR
-    sudo apt-get install openjdk-8-jre-headless &&\
-    # NPM for frontend-tools
-    sudo apt-get install npm
-    if [[ $? == 0 ]]; then
-	echo "system packages successfully installed"
-    else
-	echo "there were error installing the system packages"
-    fi
-}
+GIT_SOURCE_CKAN="git@github.com:eawag-rdm/eawag-ckan.git"
+SOLR_DOWNLOAD_URL="http://mirror.switch.ch/mirror/apache/dist/lucene/solr/6.0.1/solr-6.0.1.tgz"
+CKAN_LOCAL_CONFIG="/etc/ckan/default/development.ini"
 
 
 # This needs to be adapted to each specific case.
-# # Usually youl'd get this file from the backup.
-# get_development_ini() {
-#     scp vonwalha@inf-vonwalha-pc:/etc/ckan/default/development.ini /
+# Usually you would get this file from the backup.
+get_development_ini() {
+    log_out  "copying development.ini"
+    scp vonwalha@inf-vonwalha-pc:/etc/ckan/default/development.ini $CKAN_LOCAL_CONFIG
+    log_out  "finished copying development.ini "
+}
 
 
-
-# install_system_packages >>$LOGFILE
-# ck-install-source $SOURCE_PARENT $GIT_SOURCE >>$LOGFILE
-
-
-
+#install_system_packages 2>>$LOGFILE
+#fs_setup $SOURCE_PARENT 2>>$LOGFILE
+#mk_virtenv 2>>$LOGFILE
+#install_src $GIT_SOURCE_CKAN 2>>$LOGFILE
+#frontend-tools 2>>$LOGFILE
+#get_development_ini 2>>$LOGFILE
+#install_solr $SOLR_DOWNLOAD_URL 2>>$LOGFILE
+# ckan_read_solr_config $CKAN_LOCAL_CONFIG 2>>$LOGFILE
+# config_solr $SOLR_CORE 2>>$LOGFILE
+# ckan_read_db_config $CKAN_LOCAL_CONFIG 2>>$LOGFILE
+# db_destroy_local 2>>$LOGFILE
+# db_setup_local 2>>$LOGFILE
+#ckan_config_comment_plugins "comment" $CKAN_LOCAL_CONFIG 2>>$LOGFILE
+db_init_local $CKAN_LOCAL_CONFIG 2>>$LOGFILE
     

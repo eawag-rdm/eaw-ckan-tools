@@ -68,7 +68,7 @@ db_dump_remote() {
     echo
 }
 
-## destry local ckan-DB, drop ckan db-user
+## destroy local ckan-DB, drop ckan db-user
 db_destroy_local() {
     dropdb -h "$TARGET_HOST" -U "$TARGET_DB_USER" "$TARGET_DB"
     echo "dropped DB: $TARGET_HOST:$TARGET_DB"
