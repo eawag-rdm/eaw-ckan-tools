@@ -91,13 +91,13 @@ def update_field(schema, typ, field, remove, terms):
         if len(rmidx) < len(terms):
             raise SystemExit('Not all terms found in ' +
                  'field "{}" in "{}"'.format(field, typ))
-        for ri in rmidx:
-            del c[ri]
+        cnew = [x[1] for x in enumerate(c) if x[0] not in rmidx]
+        f[0]['choices'] = cnew
     return(schema)
 
 def write_schema(newschema, path):
     with open(path, 'w') as f:
-        json.dump(newschema, f)
+        json.dump(newschema, f, indent=2)
         
 def main():
     parser = mkparser()
