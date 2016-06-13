@@ -14,9 +14,9 @@ printhelp() {
 
 Usage: ck-maintain off|on TIME
 
-Switches maintenance modus for CKAN on or off. The maintenance - page to which
-users will be redirected contains the string TIME as the epected time
-when the service becomes available again.
+Switches maintenance modus for CKAN on or off. The maintenance-page, to which
+users will be redirected, contains the string TIME as the expected time
+when the service will become available again.
 
 EOF
 }
