@@ -38,10 +38,9 @@ users will be redirected, contains the string TIME as the expected time
 when the service will become available again.
 
 <b>Note:</b>
-Here is an example for the maintenance-page:<a href="https://github.com/eawag-rdm/eaw-ckan-tools/blob/master/maintenance.html>maintenance.html</a>.
+Here is an example for the maintenance-page: <a href="https://github.com/eawag-rdm/eaw-ckan-tools/blob/master/maintenance.html">maintenance.html</a>.
 That page has to be put in the nginx document-root: /usr/share/nginx/html.
 </pre>
 
 `codeexample`
 
-</pre>
