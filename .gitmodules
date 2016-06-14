@@ -1,0 +1,3 @@
+[submodule "geolucidate"]
+	path = geolucidate
+	url = https://github.com/kurtraschke/geolucidate.git
