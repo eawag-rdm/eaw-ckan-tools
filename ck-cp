@@ -1,0 +1,30 @@
+#!/bin/bash
+
+usage() {
+    echo
+    echo "ck-cp ID DIRECTION"
+    echo "      ID: package id or name"
+    echo "      DIRECTION: in (remote -> local) | out (local -> remote)"
+    echo "ck-cp -h"
+    echo "      print this help"
+}
+
+if [[ $# != 2 || $1 == '-h' ]] ; then
+    usage
+    exit 1
+fi
+
+id=$1
+direction=$2
+remote="http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
+local_config='/etc/ckan/default/development.ini'
+if [[ $direction == 'in' ]]; then
+    ckanapi dump datasets $id  -r $remote -a $CKAN_APIKEY |ckanapi load datasets -c $local_config
+elif [[ $direction == 'out' ]]; then
+    ckanapi dump datasets $id  -c $local_config |ckanapi load datasets -r $remote -a $CKAN_APIKEY
+else
+    usage
+    exit 1
+fi
+
+
