@@ -52,7 +52,7 @@ Copies one package from one CKAN host to another. Instead of
 specifying the hosts and API-keys on the command line, the direction,
 <code>-d (in|out)</code>, can be specified. In that case, defaults set
 in the source of this script are used. Adapt constants <code> $remote,
-$local, $APIKEY\_REMOTE and $APIKEY\_LOCAL.
+$local, $APIKEY\_REMOTE and $APIKEY\_LOCAL.</code>
 
 <pre>
 <b>Usage: </b>ck-cp -i id  [-r]  (-f fromhost -t tohost -a apikey-from,apikey-to | -d direction)
@@ -67,7 +67,7 @@ $local, $APIKEY\_REMOTE and $APIKEY\_LOCAL.
       -h: print this help
 
 Example:
-     ck-cp -i mypackage0815 -f http://remote.ckan.net -t http://localhost:5000 -a key\_remote5364,key_local9474
+     ck-cp -i mypackage0815 -f http://remote.ckan.net -t http://localhost:5000 -a key_remote5364,key_local9474
      ck-cp -i mypackage0816 -d out -r
 </pre>
 

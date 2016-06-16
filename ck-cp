@@ -33,12 +33,13 @@ usage() {
     echo
     echo " Example:"
     echo "      ck-cp -i mypackage0815 -f http://remote.ckan.net -t http://localhost:5000 -a key_remote5364,key_local9474"
-    echo "      ck-cp -i mypackage0816 -d out -r" 
+    echo "      ck-cp -i mypackage0816 -d out -r"
+    echo
 
 }
 
 
-while getopts "rf:t:h:i:a:d:" arg; do
+while getopts "rf:t:hi:a:d:" arg; do
     case "$arg" in
 	r)
 	    upr="--upload-resources"
@@ -60,6 +61,7 @@ while getopts "rf:t:h:i:a:d:" arg; do
 	    ;;
 	h | *)
 	    usage
+	    exit
 	    ;;
     esac
 done
