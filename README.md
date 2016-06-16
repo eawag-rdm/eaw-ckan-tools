@@ -46,4 +46,16 @@ ssh production.server.ch sudo /home/user/bin/ck-maintain on \"$(date --date="tod
 Switches maintenance mode on a remote server on.
 </pre>
 
+## ck-cp
+
+<pre>
+<b>Usage: </b><ck-cp -i id  [-r]  (-f fromhost -t tohost -a apikey-from,apikey-to | -d direction)
+      id: package id or name
+      -f fromhost: host of source of package
+      -t tohost: host of target of package
+      -d direction: in (remote -> local) | out (local -> remote)
+      -r: also copy resources
+      -a apikey-from,apikey-to: CKAN API-keys for the hosts
+      -h: print this help
+</pre>
 
