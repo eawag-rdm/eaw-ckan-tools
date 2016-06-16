@@ -68,7 +68,7 @@ $local, $APIKEY\_REMOTE and $APIKEY\_LOCAL.</code>
       -h: print this help
 
 <b>Examples:</b>
-     ck-cp -i mypackage0815 -f http://remote.ckan.net -t http://localhost:5000 -a key_remote5364,key_local9474
+     ck-cp -i mypack0815 -f http://rem.ck.net -t http://localhost:5000 -a key_remote64,key_local94
      ck-cp -i mypackage0816 -d out -r
 </pre>
 
