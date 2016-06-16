@@ -48,6 +48,12 @@ Switches maintenance mode on a remote server on.
 
 ## ck-cp
 
+Copies one package from one CKAN host to another. Instead of
+specifying the hosts and API-keys on the command line, the direction,
+<code>-d (in|out)</code>, can be specified. In that case, defaults set
+in the source of this script are used. Adapt constants <code> $remote,
+$local, $APIKEY\_REMOTE and $APIKEY\_LOCAL.
+
 <pre>
 <b>Usage: </b>ck-cp -i id  [-r]  (-f fromhost -t tohost -a apikey-from,apikey-to | -d direction)
        ck-cp -h
@@ -59,5 +65,9 @@ Switches maintenance mode on a remote server on.
 	  -a apikey-from,apikey-to: CKAN API-keys for the hosts
       -d direction: in (remote -> local) | out (local -> remote)
       -h: print this help
+
+Example:
+     ck-cp -i mypackage0815 -f http://remote.ckan.net -t http://localhost:5000 -a key\_remote5364,key_local9474
+     ck-cp -i mypackage0816 -d out -r
 </pre>
 

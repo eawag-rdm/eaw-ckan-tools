@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# HvW 2016-06-16
+
+### adapt this to your setup #####################################
 # default hosts used for "-d direction (in|out)" syntax
 remote="http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
 local="http://localhost:5000"
@@ -7,17 +10,31 @@ local="http://localhost:5000"
 # Env. variables containing the API-KEYS for remote- and local-host. 
 APIKEY_REMOTE=$CKAN_APIKEY
 APIKEY_LOCAL=$CKAN_APIKEY
+# ###################################################################
 
 usage() {
     echo
+    echo "ck-cp"
+    echo "Description:"
+    echo "       Copies one package from one CKAN host to another. Instead of specifying the"
+    echo "       hosts and API-keys on the command line, the direction, -d, can be specified."
+    echo "       In that case, defaults set in the source of this script are used."
+    echo
+    echo "Usage:"
     echo "ck-cp -i id  [-r]  (-f fromhost -t tohost -a apikey-from,apikey-to | -d direction)"
-    echo "      id: package id or name"
+    echo "ck-cp -h"
+    echo "      -i id: package id or name"
     echo "      -f fromhost: host of source of package"
     echo "      -t tohost: host of target of package"
     echo "      -d direction: in (remote -> local) | out (local -> remote)"
     echo "      -r: also copy resources"
     echo "      -a apikey-from,apikey-to: CKAN API-keys for the hosts"
     echo "      -h: print this help"
+    echo
+    echo " Example:"
+    echo "      ck-cp -i mypackage0815 -f http://remote.ckan.net -t http://localhost:5000 -a key_remote5364,key_local9474"
+    echo "      ck-cp -i mypackage0816 -d out -r" 
+
 }
 
 
