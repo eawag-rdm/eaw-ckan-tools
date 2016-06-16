@@ -50,7 +50,7 @@ Switches maintenance mode on a remote server on.
 
 <pre>
 <b>Usage: </b>ck-cp -i id  [-r]  (-f fromhost -t tohost -a apikey-from,apikey-to | -d direction)
-ck-cp -h
+       ck-cp -h
 <b>Options: </b>
 	  -i id: package id or name
       -r: also copy resources
