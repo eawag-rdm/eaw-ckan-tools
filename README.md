@@ -50,12 +50,14 @@ Switches maintenance mode on a remote server on.
 
 <pre>
 <b>Usage: </b>ck-cp -i id  [-r]  (-f fromhost -t tohost -a apikey-from,apikey-to | -d direction)
-      id: package id or name
+                          ck-cp -h
+<b>Options: </b>
+	  -i id: package id or name
+      -r: also copy resources
       -f fromhost: host of source of package
       -t tohost: host of target of package
+	  -a apikey-from,apikey-to: CKAN API-keys for the hosts
       -d direction: in (remote -> local) | out (local -> remote)
-      -r: also copy resources
-      -a apikey-from,apikey-to: CKAN API-keys for the hosts
       -h: print this help
 </pre>
 
