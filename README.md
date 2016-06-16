@@ -67,7 +67,7 @@ $local, $APIKEY\_REMOTE and $APIKEY\_LOCAL.</code>
       -d direction: in (remote -> local) | out (local -> remote)
       -h: print this help
 
-Examples:
+<b>Examples:</b>
      ck-cp -i mypackage0815 -f http://remote.ckan.net -t http://localhost:5000 -a key_remote5364,key_local9474
      ck-cp -i mypackage0816 -d out -r
 </pre>
