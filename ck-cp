@@ -1,30 +1,110 @@
 #!/bin/bash
 
+# default hosts used for "-d direction (in|out)" syntax
+remote="http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
+local="http://localhost:5000"
+
+# Env. variables containing the API-KEYS for remote- and local-host. 
+APIKEY_REMOTE=$CKAN_APIKEY
+APIKEY_LOCAL=$CKAN_APIKEY
+
 usage() {
     echo
-    echo "ck-cp ID DIRECTION"
-    echo "      ID: package id or name"
-    echo "      DIRECTION: in (remote -> local) | out (local -> remote)"
-    echo "ck-cp -h"
-    echo "      print this help"
+    echo "ck-cp -i id  [-r]  (-f fromhost -t tohost -a apikey-from,apikey-to | -d direction)"
+    echo "      id: package id or name"
+    echo "      -f fromhost: host of source of package"
+    echo "      -t tohost: host of target of package"
+    echo "      -d direction: in (remote -> local) | out (local -> remote)"
+    echo "      -r: also copy resources"
+    echo "      -a apikey-from,apikey-to: CKAN API-keys for the hosts"
+    echo "      -h: print this help"
 }
 
-if [[ $# != 2 || $1 == '-h' ]] ; then
+
+while getopts "rf:t:h:i:a:d:" arg; do
+    case "$arg" in
+	r)
+	    upr="--upload-resources"
+	    ;;
+	f)
+	    fromhost=${OPTARG}
+	    ;;
+	t)
+	    tohost=${OPTARG}
+	    ;;
+	i)
+	    id=${OPTARG}
+	    ;;
+	d)
+	    direction=${OPTARG}
+	    ;;
+	a)
+	    IFS=',' read -ra apikeys <<<${OPTARG}
+	    ;;
+	h | *)
+	    usage
+	    ;;
+    esac
+done
+
+if [[ -z "$id" ]]; then
+    echo "no package ID given"
     usage
     exit 1
 fi
 
-id=$1
-direction=$2
-remote="http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
-local_config='/etc/ckan/default/development.ini'
-if [[ $direction == 'in' ]]; then
-    ckanapi dump datasets $id  -r $remote -a $CKAN_APIKEY |ckanapi load datasets -c $local_config
-elif [[ $direction == 'out' ]]; then
-    ckanapi dump datasets $id  -c $local_config |ckanapi load datasets -r $remote -a $CKAN_APIKEY
-else
+if [[ -z $direction ]] && [[ -z $fromhost || -z $tohost || ${#apikeys[2]} != 2 ]]; then
+    echo "specify either direction or fromhost AND tohost AND both apikeys"
     usage
     exit 1
 fi
+
+if [[ -n $direction ]] && [[ -n $fromhost || -n $tohost ]]; then
+    echo "specify EITHER direction or fromhost and tohost and apikeys"
+    usage
+    exit 1
+fi
+
+if [[ "$direction" == "in" ]]; then
+    fromhost=$remote
+    tohost=$local
+    key_from=$APIKEY_REMOTE
+    key_to=$APIKEY_LOCAL
+elif [[ "$direction" == "out" ]]; then
+    fromhost=$local
+    tohost=$remote
+    key_from=$APIKEY_LOCAL
+    key_to=$APIKEY_REMOTE
+else
+    key_from=${apikeys[0]}
+    key_to=${apikeys[1]}
+fi
+
+
+ckanapi dump datasets $id -r $fromhost -a $key_from |ckanapi load datasets $upr -r $tohost -a $key_to
+	
+
+
+      
+
+
+# if [[ $# != 2 || $1 == '-h' ]] ; then
+#     usage
+#     exit 1
+# fi
+
+# id=$1
+# direction=$2
+
+# local_config='/etc/ckan/default/development.ini'
+
+# if [[ $direction == 'in' ]]; then
+#     ckanapi dump datasets $id  -r $remote -a $CKAN_APIKEY |ckanapi load datasets -c $local_config
+# elif [[ $direction == 'out' ]]; then
+#     ckanapi dump datasets $id  -c $local_config |ckanapi load datasets -r $remote -a $CKAN_APIKEY
+# else
+#     usage
+#     exit 1
+# fi
 
 
