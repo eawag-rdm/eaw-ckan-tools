@@ -49,7 +49,7 @@ Switches maintenance mode on a remote server on.
 ## ck-cp
 
 <pre>
-<b>Usage: </b><ck-cp -i id  [-r]  (-f fromhost -t tohost -a apikey-from,apikey-to | -d direction)
+<b>Usage: </b>ck-cp -i id  [-r]  (-f fromhost -t tohost -a apikey-from,apikey-to | -d direction)
       id: package id or name
       -f fromhost: host of source of package
       -t tohost: host of target of package
