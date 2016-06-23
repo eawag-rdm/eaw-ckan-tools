@@ -37,12 +37,14 @@ class Coordparser(object):
     # read textarea input from file
     def get_from_file(self, filename):
         with open(filename, 'r') as f:
-            self.txt = f.read()
+            self.txt = f.read().strip()
+        print "self.txt: <<{}>>".format(self.txt)
         return(self)
 
     # parses one line for first coordinate
     def _parse(self, coostring):
         parseres = re.match(self.regex, coostring)
+        print "coostring: {}".format(coostring)
         if not parseres:
             sys.exit("Unable to decode coordinates")
         return((parseres.groupdict(), parseres.group(0)))
@@ -69,7 +71,7 @@ class Coordparser(object):
     # returns list of points
     def textarea2points(self):
         points = []
-        lines = [s.strip()for s in self.txt.splitlines()]
+        lines = [s.strip() for s in self.txt.splitlines()]
         for l in lines:
             pdict = {}
             lp = l
