@@ -97,13 +97,35 @@ class PackageModifier(object):
         print "timerange: {}".format(self.pkg(idn)['timerange'])
 
     # set new required fields (self.newfields) to default values
-    def fixpackage(self, idn):
+    def fixpackage_newfields(self, idn):
         newpkg = copy.deepcopy(pm.pkg(idn))
         for f in self.newfields.keys():
             if f not in newpkg:
                 print "setting {} to {}".format(f, newfields[f])
                 newpkg[f] = newfields[f]
         return(newpkg)
+
+    def checkpkg_reupload(self, idn, respack):
+        try:
+            respack.append(self.action('package_update', self.pkg(idn)))
+        except ckanapi.errors.ValidationError as e:
+            return False
+        else:
+            return True
+
+    def fixpackage_Image2Bitmap_Image(self, idn):
+        newpkg = copy.deepcopy(pm.pkg(idn))
+        resources = newpkg.get('resources', [])
+        restypes = [(i, x.get('resource_type')) for i, x in enumerate(resources)]
+        for i, t in restypes:
+            if t == 'Image':
+                newpkg['resources'][i] = 'Bitmap Image'
+                print "replacement in {}".format(newpkg['name'])
+        return(newpkg)
+            
+        
+        
+        
 
 # ###############################################
 
@@ -122,8 +144,10 @@ for idn in pm.packagelist:
     if idn in pm.failed_pkgs:
         continue
     pm.info(idn)
-    try:
-        respack.append(pm.action('package_update', pm.pkg(idn)))
-    except ckanapi.errors.ValidationError as e:
-        newpkg = pm.fixpackage(idn)
-        respack.append(pm.action('package_update', newpkg))
+    # if not pm.checkpkg_reupdate(pm.pkg(idn), respack):
+    #     newpkg = pm.fixpackage_newfields(idn)
+    #     respack.append(pm.action('package_update', newpkg))
+    newpkg = pm.fixpackage_Image2Bitmap_Image(idn)
+    
+
+
