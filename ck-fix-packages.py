@@ -122,16 +122,41 @@ class PackageModifier(object):
                 newpkg['resources'][i]['resource_type'] = 'Bitmap Image'
                 print "replacement in {}".format(newpkg['name'])
         return(newpkg)
-            
+
+    def fixpackage_rename_field(self, idn, oldname, newname):
+        newpkg = copy.deepcopy(pm.pkg(idn))
+        if newpkg.get(oldname, {}):
+            print ("Found {} in {}, renaming to {}"
+                   .format(oldname, idn, newname))
+            newpkg[newname] = newpkg[oldname]
+            del newpkg[oldname]
+            return newpkg
+        else:
+            return False
         
-        
-        
+    def fixpackage_patch_missing(self, idn, fields):
+        newpkg = copy.deepcopy(pm.pkg(idn))
+        changed = False
+        for f in fields:
+            if not newpkg.get(f['name'], {}) or f['force']:
+                changed = True
+                print ("setting {} in {} to {}"
+                       .format(f['name'], idn, f['default']))
+                newpkg[f['name']] = f['default']
+        if changed:
+            return newpkg
+        else:
+            return False
 
 # ###############################################
 
 
 pm = PackageModifier(host, apikey)
 #pm = PackageModifier(localhost, apikey)
+
+
+# Assume that "fixpackage_whatever returns the replacement package
+# if need be fixed, else False
 
 # Get package, try updating with package gotten.
 # Record packages that can't be downloaded.
@@ -144,8 +169,16 @@ for idn in pm.packagelist:
     if idn in pm.failed_pkgs:
         continue
     pm.info(idn)
-    # if not pm.checkpkg_reupdate(pm.pkg(idn), respack):
-    #     newpkg = pm.fixpackage_newfields(idn)
-    #     respack.append(pm.action('package_update', newpkg))
-    newpkg = pm.fixpackage_Image2Bitmap_Image(idn)
-    respack.append(pm.action('package_update', newpkg))
+    newpkg = pm.fixpackage_rename_field(idn, 'species', 'taxa')
+    if newpkg:
+        respack.append(pm.action('package_update', newpkg))
+        #respack.append(newpkg)
+
+
+## Individual ckecks
+# idn = 'light-microscopy-for-sgier2016'
+# p = [x for x in respack if x['name'] == idn][0]
+# ckan = ckanapi.RemoteCKAN(host, apikey=apikey)
+# ckan.call_action('package_update', p)
+
+ 
