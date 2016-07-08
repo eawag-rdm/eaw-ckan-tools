@@ -119,7 +119,7 @@ class PackageModifier(object):
         restypes = [(i, x.get('resource_type')) for i, x in enumerate(resources)]
         for i, t in restypes:
             if t == 'Image':
-                newpkg['resources'][i] = 'Bitmap Image'
+                newpkg['resources'][i]['resource_type'] = 'Bitmap Image'
                 print "replacement in {}".format(newpkg['name'])
         return(newpkg)
             
@@ -148,6 +148,4 @@ for idn in pm.packagelist:
     #     newpkg = pm.fixpackage_newfields(idn)
     #     respack.append(pm.action('package_update', newpkg))
     newpkg = pm.fixpackage_Image2Bitmap_Image(idn)
-    
-
-
+    respack.append(pm.action('package_update', newpkg))
