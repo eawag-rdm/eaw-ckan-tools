@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # HvW - 2016-06-15
 # transformation of coordinates from textarea
@@ -10,6 +11,8 @@ import re
 import sys
 import json
 from decimal import *
+import logging
+
 getcontext().prec = 8
 
 
@@ -19,15 +22,14 @@ class Coordparser(object):
         self.txt = ''
         self.points = []
         self.geojson = ''
-        return
 
     # values are multipliers
     directions = {'N': 1, 'E': 1, 'S': -1, 'W': -1}
     dir_sig = ur'(?P<direction>[' + ''.join(directions.keys()) + ']?)'
-    deg_sig = ur'°'
-    min_sig = ur'`'
-    sec_sig = ur'``'
-    deg_pat = (ur'\s*' + dir_sig + ur'?\s*' + ur'(?P<degs>\d{1,3})\s*' +
+    deg_sig = ur'(?:°|\s+)'
+    min_sig = ur"([`'']|\s+)"
+    sec_sig = ur'''(?:``|''|'`|`'|"|)'''
+    deg_pat = (ur'\s*' + dir_sig + ur'?\s*' + ur'(?P<degs>\d{1,3}(?:\.\d+)?)\s*' +
                deg_sig + ur'\s*')
     min_pat = ur'\s*(?P<mins>[0-5]?\d)\s*' + min_sig + ur'\s*'
     sec_pat = ur'\s*(?P<secs>[0-5]?\d(?:\.\d*)?)\s*' + sec_sig + ur'\s*'
@@ -44,16 +46,23 @@ class Coordparser(object):
     # parses one line for first coordinate
     def _parse(self, coostring):
         parseres = re.match(self.regex, coostring)
-        print "coostring: {}".format(coostring)
+        # print(u'regex: {}'.format(self.regex.pattern))
         if not parseres:
+            print(u'regex: {}'.format(self.regex.pattern))
+            print(u'coostring: {}'.format(coostring))
             sys.exit("Unable to decode coordinates")
-        return((parseres.groupdict(), parseres.group(0)))
+        parsedict = parseres.groupdict()
+        return (parseres.groupdict(), parseres.group(0))
 
     # transforms on dms - coordinate
     # ({'direction': , 'degs': ,'mins': ,'secs': }) to decimal
     def _dms2decimal(self, dmsdict):
         point0 = dmsdict
-        factor = self.directions[point0['direction']]
+        ## if no direction was detected, assume positive (East or North)
+        try:
+            factor = self.directions[point0['direction']]
+        except KeyError:
+            factor = 1
 
         #print type(point0['degs'])
         # print Decimal(point0['mins'])
@@ -72,13 +81,19 @@ class Coordparser(object):
     def textarea2points(self):
         points = []
         lines = [s.strip() for s in self.txt.splitlines()]
+        count = 0
         for l in lines:
+            count += 1
+            print "line no: {}".format(count)
             pdict = {}
             lp = l
             for p in ('y', 'x'):
                 dmsdict, match = self._parse(lp)
+                print u"matched {}".format(p)
+                print "dmsdict = {}".format(dmsdict)
                 pdict[p] = self._dms2decimal(dmsdict)
                 lp = lp.replace(match, '')
+                print u"remainder: {}".format(lp)
             points.append(pdict)
         self.points = points
         return(self)
@@ -140,7 +155,13 @@ class Test_Coordparser(object):
 
     def test_textarea2points(self):
         self.P.txt = \
-"""N47°   16` 52``  E8° 48` 36``
+u"""N47°   16` 52``  E8° 48` 36``
+N47°  16' 52'' E8°  48' 36'`
+N47°  16' 52`' E8°  48' 36"
+47°  16' 52" E8° 48' 36''
+47.09  16' 52" E8.5 48' 36''
+47  16 52" E8° 48' 36
+S47°  16' 52" 8 48' 36''
 N47° 16`  54``  E8°  46` 49``
 N47° 18` 8`` E8° 44`  52``
 N47° 18`  10`` E8° 44` 47``
@@ -149,6 +170,12 @@ N47° 19` 46``  E8° 43` 2``
 """
  
         expect = [{'y': Decimal('47.281111'), 'x': Decimal('8.81')},
+                  {'y': Decimal('47.281111'), 'x': Decimal('8.81')},
+                  {'y': Decimal('47.281111'), 'x': Decimal('8.81')},
+                  {'y': Decimal('47.281111'), 'x': Decimal('8.81')},
+                  {'y': Decimal('47.371111'), 'x': Decimal('9.31')},
+                  {'y': Decimal('47.281111'), 'x': Decimal('8.81')},
+                  {'y': Decimal('-47.281111'), 'x': Decimal('8.81')},
                   {'y': Decimal('47.281667'), 'x': Decimal('8.7802778')},
                   {'y': Decimal('47.302222'), 'x': Decimal('8.7477777')},
                   {'y': Decimal('47.302778'), 'x': Decimal('8.7463889')},
@@ -160,15 +187,14 @@ N47° 19` 46``  E8° 43` 2``
         eq_(self.P.points, expect)
         
         
-                  
+
+
 # Test_Coordparser().test_deg_pat()
 # Test_Coordparser().test_min_pat()
 # Test_Coordparser().test_sec_pat()
-# Test_Coordparser().test_textarea2points()
+Test_Coordparser().test_textarea2points()
 
-P = Coordparser()
-#
-
-out = (P.get_from_file('coordinates.txt').textarea2points()
-       .points2geojson('MultiPoint').geojson)
-print out
+# P = Coordparser()
+# out = (P.get_from_file('coordinates.txt').textarea2points()
+#        .points2geojson('MultiPoint').geojson)
+# print out
