@@ -116,12 +116,17 @@ class PackageModifier(object):
     def fixpackage_Image2Bitmap_Image(self, idn):
         newpkg = copy.deepcopy(pm.pkg(idn))
         resources = newpkg.get('resources', [])
+        changed = False
         restypes = [(i, x.get('resource_type')) for i, x in enumerate(resources)]
         for i, t in restypes:
             if t == 'Image':
+                changed = True
                 newpkg['resources'][i]['resource_type'] = 'Bitmap Image'
                 print "replacement in {}".format(newpkg['name'])
-        return(newpkg)
+        if changed:
+            return(newpkg)
+        else:
+            return(False)
 
     def fixpackage_rename_field(self, idn, oldname, newname):
         newpkg = copy.deepcopy(pm.pkg(idn))
@@ -148,11 +153,56 @@ class PackageModifier(object):
         else:
             return False
 
+    def fixpackage_timerange_quotes(self, idn):
+        newpkg = copy.deepcopy(pm.pkg(idn))
+        timerangelist = newpkg.get('timerange')
+        changed = False
+        if not isinstance(timerangelist, list):
+            print("Problem: {} ({}) in {} not a list"
+                  .format(timerangelist, type(timerangelist),newpkg.get('name')))
+            return
+        for i,s in enumerate(timerangelist):
+            if not isinstance(s, basestring):
+                print("Problem: {} ({}) in {} not a string"
+                .format(s, type(s),newpkg.get('name')))
+                return
+            if s.find("TO") != -1 and (s[0] != '[' and s[-1] != ']'):
+                print "Need for replacement: {} in {}".format(
+                    s, newpkg.get('name'))
+                changed = True
+                timerangelist[i] = '[' + s + ']'
+                print "Repaced: {}".format(newpkg.get('timerange'))
+        if changed:
+            return newpkg
+        else:
+            return False
+
+    def fixpackage_extras_species2taxa(self, idn, newpkg=False):
+        newpkg = copy.deepcopy(pm.pkg(idn)) if not newpkg else newpkg
+        extras = newpkg.get('extras')
+        taxa = newpkg.get('taxa', None)
+        changed = False
+        if extras:
+            ekeys = [x['key'] for x in extras]
+            for i, k in enumerate(ekeys):
+                if k == 'species':
+                    changed = True
+                    del extras[i]
+        if taxa is None:
+            newpkg['taxa'] = ''
+        if changed:
+            return newpkg
+        else:
+            return False
+            
+        
+        
+
 # ###############################################
 
 
-pm = PackageModifier(host, apikey)
-#pm = PackageModifier(localhost, apikey)
+#pm = PackageModifier(host, apikey)
+pm = PackageModifier(localhost, apikey)
 
 
 # Assume that "fixpackage_whatever returns the replacement package
@@ -169,11 +219,16 @@ for idn in pm.packagelist:
     if idn in pm.failed_pkgs:
         continue
     pm.info(idn)
-    newpkg = pm.fixpackage_rename_field(idn, 'species', 'taxa')
+    newpkg = pm.fixpackage_timerange_quotes(idn)
+    #newpkg = pm.fixpackage_Image2Bitmap_Image(idn)
+    #newpkg = pm.fixpackage_extras_species2taxa(idn)
+    # newpkg = pm.fixpackage_patch_missing(idn, [{'name': 'systems',
+    #                                             'default': 'none',
+    #                                             'force': False}])
+    # newpkg = pm.fixpackage_extras_species2taxa(idn, newpkg)
     if newpkg:
+        print "Package Update: {}".format(newpkg['name'])
         respack.append(pm.action('package_update', newpkg))
-        #respack.append(newpkg)
-
 
 ## Individual ckecks
 # idn = 'light-microscopy-for-sgier2016'
@@ -182,3 +237,10 @@ for idn in pm.packagelist:
 # ckan.call_action('package_update', p)
 
  
+# tr = [(v['name'], v['timerange'], type(v['timerange'])) for k,v in pm.packages.iteritems()]
+# #tr = [(v['name'], v.get('substances')) for k,v in pm.packages.iteritems()]
+# trt = [x[1] for x in tr]
+
+
+
+    
