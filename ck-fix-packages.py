@@ -21,12 +21,15 @@ localhost = "http://localhost:5000"
 
 class PackageModifier(object):
     def __init__(self, host, apikey):
+        self.failed_pkgs = []
+        self.packages = {}
+        self.respack = []
+        self.subpkgs = {}
         self.ckan = ckanapi.RemoteCKAN(host, apikey=apikey)
         self.action = self.ckan.call_action
         self.packagelist = self.action('package_list')
-        self.packages = {}
-        self.subpkgs = {}
-        self.failed_pkgs = []
+        self.download_all()
+        #
         self.newfields = {'systems': 'none',
                           'generic-terms': 'none',
                           'variables': 'none',
@@ -34,6 +37,13 @@ class PackageModifier(object):
                           'substances': [],}
 
 
+    def download_all(self):
+        self.failed_pkgs = []
+        self.packages = {}
+        for idn in self.packagelist:
+            self.dl_pkg(idn)
+        print "Failed downloads: {}".format(len(self.failed_pkgs))
+            
     def print_pkglist(self):
         pp.pprint(self.packagelist)
 
@@ -94,8 +104,8 @@ class PackageModifier(object):
         id = self.pkg(idn)['id']
         name = self.pkg(idn)['name']
         print "id: {} name: {}".format(idn, name)
-        print "timerange: {}".format(self.pkg(idn)['timerange'])
-
+        # print "timerange: {}".format(self.pkg(idn)['timerange'])
+        
     # set new required fields (self.newfields) to default values
     def fixpackage_newfields(self, idn):
         newpkg = copy.deepcopy(pm.pkg(idn))
@@ -178,7 +188,7 @@ class PackageModifier(object):
             return False
 
     def fixpackage_extras_species2taxa(self, idn, newpkg=False):
-        newpkg = copy.deepcopy(pm.pkg(idn)) if not newpkg else newpkg
+        newpkg = copy.deepcopy(self.pkg(idn)) if not newpkg else newpkg
         extras = newpkg.get('extras')
         taxa = newpkg.get('taxa', None)
         changed = False
@@ -194,53 +204,53 @@ class PackageModifier(object):
             return newpkg
         else:
             return False
-            
-        
-        
 
+    def fixpackage_identity(self, idn):
+        newpkg = self.pkg(idn)
+        if newpkg:
+            return newpkg
+        else:
+            print "ERROR: Package {} not found".format(idn)
+            print "Package Info:"
+            print self.info(idn)
+    
+    def applyfix(self, fixfunction, *args):
+        self.respack = []
+        for idn in self.packagelist:
+           #print "Checking package {}".format(idn)
+           if idn in pm.failed_pkgs:
+               continue
+           newpkg = fixfunction(idn, *args)
+           if newpkg:
+               print "Package Update: {}".format(newpkg['name'])
+               self.respack.append(self.action('package_update', newpkg))
+
+
+    def check_identical(self):
+        respackmap = {id: pack
+                      for id, pack in [(x['id'], x) for x in self.respack]}
+        for id in [x[0] for x in self.packages.keys()]:
+            a = sorted([k for k in self.pkg(id).keys()
+                        if k not in ['metadata_created', 'metadata_modified']])
+            b = sorted([k for k in respackmap[id].keys()
+                        if k not in ['metadata_created', 'metadata_modified']])
+            if not (a == b):
+                print "List of keys differs({})".format(respackmap[id]['name'])
+                return (a, b)
+            av = [self.pkg(id)[k] for k in a]
+            bv = [respackmap[id][k] for k in b]
+            if not (av == bv):
+                print "Values differ in {}".format(respackmap[id]['name'])
+                return (av, bv)
+            return None
 # ###############################################
 
 
-#pm = PackageModifier(host, apikey)
-pm = PackageModifier(localhost, apikey)
-
-
-# Assume that "fixpackage_whatever returns the replacement package
-# if need be fixed, else False
-
-# Get package, try updating with package gotten.
-# Record packages that can't be downloaded.
-# Fix packages with which the re-update failed,
-#  (here, add new fields with default values)
-respack = []
-for idn in pm.packagelist:
-    print "Checking package {}".format(idn)
-    pm.dl_pkg(idn)
-    if idn in pm.failed_pkgs:
-        continue
-    pm.info(idn)
-    newpkg = pm.fixpackage_timerange_quotes(idn)
-    #newpkg = pm.fixpackage_Image2Bitmap_Image(idn)
-    #newpkg = pm.fixpackage_extras_species2taxa(idn)
-    # newpkg = pm.fixpackage_patch_missing(idn, [{'name': 'systems',
-    #                                             'default': 'none',
-    #                                             'force': False}])
-    # newpkg = pm.fixpackage_extras_species2taxa(idn, newpkg)
-    if newpkg:
-        print "Package Update: {}".format(newpkg['name'])
-        respack.append(pm.action('package_update', newpkg))
-
-## Individual ckecks
-# idn = 'light-microscopy-for-sgier2016'
-# p = [x for x in respack if x['name'] == idn][0]
-# ckan = ckanapi.RemoteCKAN(host, apikey=apikey)
-# ckan.call_action('package_update', p)
-
- 
-# tr = [(v['name'], v['timerange'], type(v['timerange'])) for k,v in pm.packages.iteritems()]
-# #tr = [(v['name'], v.get('substances')) for k,v in pm.packages.iteritems()]
-# trt = [x[1] for x in tr]
+pm = PackageModifier(host, apikey)
+#pm = PackageModifier(localhost, apikey)
+#pm.applyfix(pm.fixpackage_extras_species2taxa)
+pm.applyfix(pm.fixpackage_identity)
+res = pm.check_identical()
 
 
 
-    
