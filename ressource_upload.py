@@ -2,12 +2,14 @@ import ckanapi
 import os
 import hashlib
 import magic
+import Tkinter
 
 
 import time
 
 BUFSIZE = 2**16
-host = "http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
+#host = "http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
+host = "http://localhost:5000"
 apikey = os.environ['CKAN_APIKEY']
 
 ckan = ckanapi.RemoteCKAN(host, apikey=apikey)
@@ -45,7 +47,7 @@ def mimetype(f):
 
 
 def main():
-    for f in list_of_files(SOURCEDIR):
+    for f in list_of_files(SOURCEDIR)[0:1]:
         print f
         print "Calculating hash for {} ...".format(os.path.basename(f))
         print f
