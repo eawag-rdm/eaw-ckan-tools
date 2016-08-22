@@ -3,94 +3,69 @@ from Tkinter import *
 from tkinter import ttk
 
 
-#host = "http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
-host = "http://localhost:5000"
-# apikey = os.environ['CKAN_APIKEY']
-apikey = '948b0f87-d710-4cec-9979-d1ac2fd0d186'
-ckan = ckanapi.RemoteCKAN(host, apikey=apikey)
+class App(object):
 
-orgas = ckan.call_action('organization_list_for_user')
-orga = orgas[0]
-packagelist = ckan.call_action('package_search',
-                               {'q':'owner_org:{}'.format(orga['id']),
-                                'include_drafts': True,
-                                'include_private': True
-                               })
+    def __init__(self, url, apikey):
+        self.ckan = ckanapi.RemoteCKAN(url, apikey=apikey)
+        self.orgas_name, self.orgas_id = self._get_organizations('update_dataset')
 
-### patch core to include private !!
+        
+    def _get_organizations(self, permission):
+        orgas = ckan.call_action('organization_list_for_user',
+                             {'permission': permission})
+        return zip(*[(o['display_name'], o['id']) for o in orgas])
+
+    def _get_packages(self, orga):
+        packagelist = ckan.call_action('package_search',
+                                    {'q':'owner_org:{}'.format(orga),
+                                    'include_drafts': True,
+                                    'include_private': True
+                                })
+        return zip(*[(p['name'], p['id']) for p in packagelist['results']])
+        #return zip(*[(p['name'], p['id']) for p in packagelist])
+
+    
 
 
+app = App("http://localhost:5000", '948b0f87-d710-4cec-9979-d1ac2fd0d186')
 
-pkg = ckan.call_action('package_show',{'id':'whitefish-genomics'})
+#print app.test
+print app.orgas_name
+print app.orgas_id
+
+print app._get_packages(app.orgas_id[1])
+
+    
+
+def selection_clear(e):
+    e.widget.selection_clear()
 
 totalwidth = 1280
 totalheight = 800
-package = StringVar()
-package.set("an_example_package_name that might be quite long")
 
 root = Tk()
-
-fr = ttk.Frame(root, width=totalwidth, height=totalheigth)
-pkg_select = ttk.Combobox(textvariable=package)
+fr = ttk.Frame(root, width=totalwidth, height=totalheight)
 fr.grid(column=0, row=0)
-pkg_select.grid(column=0, row=0, sticky=()
 
-# fr1 = ttk.Frame(fr, width=100, height=200)
-# fr1.grid(row=1, column=2)
-# fr1['borderwidth'] = 3
-# fr1['relief'] = 'solid'
+organization_value = StringVar()
+organization = ttk.Combobox(fr, textvariable=organization_value, state='readonly', height=5)
 
+orgas = [o['display_name'] for o in
+         get_organizations('update_dataset')]
+orgas.sort()
+organization['values'] = orgas
+organization_value.set(orgas[0])
 
-# logo = PhotoImage(file="/home/vonwalha/buero/logos/eaw-rdm1.png")
-# labstring = StringVar()
-# labstring.set('Bildunterschrift')
+organization.grid(column=0, row=1)
+organization.bind("<<ComboboxSelected>>", selection_clear)
+organization.bind("<<ComboboxSelected>>", refresh_packages)
 
-# lab1 = ttk.Label(fr, text="A Label")
-# lab1['image'] = logo
-# lab1['textvariable'] = labstring
-# lab1['compound'] = 'bottom'
-# lab1.grid(column=4, row=3)
+l = ttk.Label(fr, text="LABEL")
+l.grid(column=1,row=0)
+l.bind('<1>', dummy)
 
-# but = ttk.Button(fr, text="BUTTON")
-# but.grid(column=3, row=3)
-
-# def butcmd():
-#     print "Hallo"
-
-# def checkcmd():
-#     print system.get()
-
-# but['command'] = butcmd
-
-# system = StringVar()
-# check = ttk.Checkbutton(fr1, text="Metric?",
-#                         command=checkcmd, variable=system, onvalue="metric",
-#                         offvalue="imperial")
-# check.grid()
-# check['state'] = '!disabled'
-
-# o = StringVar()
-# radio1 = ttk.Radiobutton(fr, text='Option 1', variable=o, value=1)
-# radio2 = ttk.Radiobutton(fr, text='Option 2', variable=o, value=2)
-# radio3 = ttk.Radiobutton(fr, text='Option 3', variable=o, value=3)
-# radio1.grid(column=1, row=5)
-# radio2.grid(column=2, row=5)
-# radio3.grid(column=3, row=5)
-
-# entrycontent1 = StringVar()
-# entrycontent2 = StringVar()
-# entry1 = ttk.Entry(fr, textvariable=entrycontent1, width=40)
-# entry2 = ttk.Entry(fr, textvariable=entrycontent2, width=40)
-# entry1.insert(0,"WHATEVAR!")
-# entry1.grid(column=1, row=6)
-# entry2.grid(column=1, row=7)
+root.mainloop()
 
 
-# but1 = ttk.Button(fr, text="BUTTON 1")
-# but1.grid()
-
-
-
-
-
-#fr1.grid()
+    #host = "http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
+    # apikey = os.environ['CKAN_APIKEY']
