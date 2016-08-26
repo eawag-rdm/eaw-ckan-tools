@@ -1,5 +1,6 @@
 from Tkinter import *
 from tkinter import ttk
+import tkFont
 import ckanapi
 
 data_name = {'A': ['A1', 'A2', 'A3', 'A4', 'A5', 'A6'],
@@ -67,13 +68,15 @@ class MyCombobox(object):
             self._refresh_select(e.widget.current())
             print "_callback_selected fired"
             
-            
-        c = ttk.Combobox(parent, textvariable=self.selected['name'],
+        f = ttk.Frame(parent, padding='10')    
+        c = ttk.Combobox(f, textvariable=self.selected['name'],
                          state='readonly',values=self._values_items('name'))
         c.bind('<<ComboboxSelected>>', _callback_selected)
-        cl = ttk.Label(parent, text=label)
-        cl.grid(row=position[0] - 1, column=position[1])
-        c.grid(row=position[0], column=position[1])
+        cl = ttk.Label(f, text=label, font="-weight bold -size 9")
+        cl.grid(row=0, column=0, sticky='W')
+        c.grid(row=1, column=0, sticky='W')
+        f.grid(row=position[0], column=position[1], sticky='W')
+
         return(c)
 
     def _refresh_select(self, idx):
@@ -120,21 +123,20 @@ class Resource(MyCombobox):
         #     self._refresh_select(e.widget.current())
         #     print "_callback_selected fired"
             
-            
+        colwidth = [200, 30, 30, 60]    
         c = ttk.Treeview(parent,
                          columns=['name', 'type', 'size', 'modified'],
                          show="headings",
                          height=20,
-                         padding=10,
                          selectmode='browse')
         for h in range(0,4):
             c.heading(h, text = ['Name', 'Type', 'Size', 'Modified'][h])
+            c.column(h, stretch=True, width=colwidth[h])
             #c.bind('<<ComboboxSelected>>', _callback_selected)
-        c.insert('',0, None, values = ['RESNAME', 'a type',
-                                           'Giigabytes', '1970-01-01'])
-        cl = ttk.Label(parent, text=label)
-        cl.grid(row=position[0] - 1, column=position[1], columnspan=2)
-        c.grid(row=position[0], column=position[1], columnspan=2)
+        # c.insert('',0, None, values = ['RESNAME', 'a type',
+        #                                    'Giigabytes', '1970-01-01'])
+        c.grid(row=position[0], column=position[1], columnspan=3, sticky='wes')
+
         return(c)
 
     
@@ -165,25 +167,26 @@ class ResourceMeta(object):
         self.frame = self._mk_frame(parentframe, position)
         self.name_d = StringVar()
         self.name = ttk.Entry(self.frame, textvariable=self.name_d)
-        self.description = Text(self.frame, wrap=WORD)
-        self.citation = Text(self.frame, wrap=WORD)
-        self.the_pub_d = StringVar()
-        self.the_pub = ttk.Checkbutton(self.frame,
-                                               text = "The Package?",
-                                               variable = self.the_pub_d)
-        self.restype_d = StringVar()
-        self.restype = ttk.Combobox(self.frame, textvariable=self.restype_d,
-                                    state='readonly')
-        self.name.grid(column=0, row=1)
-        self.description.grid(column=0,row=2)
-        self.citation.grid(column=0,row=3)
-        self.the_pub.grid(column=0,row=4)
-        self.restype.grid(column=0,row=5)
+        self.name.grid(column=0, row=0, sticky='NW')
+        # self.description = Text(self.frame, wrap=WORD)
+        # self.citation = Text(self.frame, wrap=WORD)
+        # self.the_pub_d = StringVar()
+        # self.the_pub = ttk.Checkbutton(self.frame,
+        #                                        text = "The Package?",
+        #                                        variable = self.the_pub_d)
+        # self.restype_d = StringVar()
+        # self.restype = ttk.Combobox(self.frame, textvariable=self.restype_d,
+        #                             state='readonly')
+        # self.name.grid(column=0, row=1)
+        # self.description.grid(column=0,row=2)
+        # self.citation.grid(column=0,row=3)
+        # self.the_pub.grid(column=0,row=4)
+        # self.restype.grid(column=0,row=5)
                                                
     def _mk_frame(self, parent, position):
         print "Making Frame"
         frame = ttk.Frame(parent, borderwidth=5, relief='ridge')
-        frame.grid(row=position[0], column=position[1], columnspan=2)
+        frame.grid(row=position[0], column=position[1], sticky='N')
         return(frame)
 
 def callback_orga(selected):
@@ -197,10 +200,37 @@ apikey = '948b0f87-d710-4cec-9979-d1ac2fd0d186'
 ckan = ckanapi.RemoteCKAN(url, apikey=apikey)
 root = Tk()
 root.title("Eawag RDM Resource Editor")
-organization = Organization('Organization', [1,0], root, None, callback_orga)
-package = Package('Package', [1,1], root, None, callback_package)
-ressource = Resource('Resources',[3,0], root, None, None)
-resmeta = ResourceMeta([4,0], root, None)
+# make resizable
+top = root.winfo_toplevel()
+top.columnconfigure(0, weight=1)
+top.rowconfigure(0, weight=1)
+
+# testframe = ttk.LabelFrame(root, text="LeftFrame", width=200, height=400)
+
+
+# testframe.grid(column=0, row=0, sticky=(N,W,E,S))
+# testframe.columnconfigure(0, weight=1)
+# testframe.rowconfigure(0, weight=1)
+
+window = ttk.PanedWindow(root, orient=HORIZONTAL)
+leftframe = ttk.Frame(window,width=400, height=300)
+#leftframe.columnconfigure(0, weight=1)
+leftframe.columnconfigure(2, weight=1)
+
+rightframe = ttk.Frame(window,width=400, height=300)
+# rightframe.grid(column=0, row=0)
+# leftframe.grid(column=1, row=0)
+window.add(leftframe)
+window.add(rightframe)
+window.grid(row=0, column=0,sticky=(N,W,E,S))
+
+# leftframe.grid(column=0, row=0, sticky='WE')
+# rightframe.grid(column=0, row=0, sticky='WE')
+
+organization = Organization('Organization', [1,0], leftframe, None, callback_orga)
+package = Package('Package', [1,1], leftframe, None, callback_package)
+ressource = Resource('Resources',[2,0], leftframe, None, None)
+resmeta = ResourceMeta([2,3], rightframe, None)
 organization.refresh()
 
 
