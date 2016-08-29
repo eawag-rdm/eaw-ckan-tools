@@ -21,7 +21,7 @@ for i in range(1,7):
 
 class MyCombobox(object):
 
-    def __init__(self, label, position, parentframe, parameter, callback):
+    def __init__(self, label, position, parentframe, parameter, callback, **gridargs):
         '''
         label (str): Label
         position (tuple): (row, column)
@@ -35,7 +35,7 @@ class MyCombobox(object):
         self.parameter = parameter
         self.callback = callback
         self.values = []
-        self.c = self._mk_combobox(label, parentframe, position)
+        self.c = self._mk_combobox(label, parentframe, position, gridargs)
 
         
     def refresh(self, parameter=None):
@@ -57,11 +57,11 @@ class MyCombobox(object):
 
     def get_select(self):
         return(self.selected)
-        
+
     def _values_items(self, item):
         return [v[item] for v in self.values]
 
-    def _mk_combobox(self, label, parent, position):
+    def _mk_combobox(self, label, parent, position, gridargs):
         
         def _callback_selected(e):
             e.widget.select_clear()
@@ -75,7 +75,7 @@ class MyCombobox(object):
         cl = ttk.Label(f, text=label, font="-weight bold -size 9")
         cl.grid(row=0, column=0, sticky='W')
         c.grid(row=1, column=0, sticky='W')
-        f.grid(row=position[0], column=position[1], sticky='W')
+        f.grid(row=position[0], column=position[1], **gridargs)
 
         return(c)
 
@@ -116,7 +116,7 @@ class Package(MyCombobox):
         
 class Resource(MyCombobox):
     
-    def _mk_combobox(self, label, parent, position):
+    def _mk_combobox(self, label, parent, position, gridargs):
         
         # def _callback_selected(e):
         #     e.widget.select_clear()
@@ -135,11 +135,10 @@ class Resource(MyCombobox):
             #c.bind('<<ComboboxSelected>>', _callback_selected)
         # c.insert('',0, None, values = ['RESNAME', 'a type',
         #                                    'Giigabytes', '1970-01-01'])
-        c.grid(row=position[0], column=position[1], columnspan=3, sticky='wes')
+        c.grid(row=position[0], column=position[1], **gridargs)
 
         return(c)
 
-    
     def refresh(self, parameter=None):
         if parameter is not None:
             self.parameter = parameter
@@ -155,19 +154,61 @@ class Resource(MyCombobox):
         for v in self.values:
             self.c.insert('', 'end', values = [v['name'], v['type'],
                                                v['size'], v['modified']])
-class ResourceMeta(object):
-    def __init__(self, position, parentframe, parameter):
-        '''
-        label (str): Label
-        position (tuple): (row, column)
-        parentframe (tk.Frame)
-        '''
-        self.parameter = parameter # resource id
+class AppButton(object):
+    def __init__(self, label, parent, position, pic, **gridargs):
+        self.label = label
+        self.b = self._mk_button(label, parent, position, pic, gridargs)
+
+
+    def _mk_button(self, label, parent, position, pic, gridargs):
+        b = ttk.Button(parent, compound=LEFT, image=pic, text=label,
+                       command=self.button_press)
+        b.grid(row=position[0], column=position[1], **gridargs)
+        print "Button - row {}, column {}".format(position[0], position[1])
         
-        self.frame = self._mk_frame(parentframe, position)
-        self.name_d = StringVar()
-        self.name = ttk.Entry(self.frame, textvariable=self.name_d)
-        self.name.grid(column=0, row=0, sticky='NW')
+    def button_press(self):
+        print "Button: {} pressed!".format(self.label)
+
+class AppFrame(ttk.Frame):
+    def __init__(self, parent, position, rowconf, colconf, frameargs, **gridargs):
+        print "FRAMEARGS: {}".format(frameargs)
+        print "GRIDARGS: {}".format(gridargs)
+        ttk.Frame.__init__(self, parent, **frameargs)
+        self.grid(row=position[0], column=position[1], **gridargs)
+        self.columnconfigure(colconf['idx'], weight=colconf['weight'])
+        self.rowconfigure(rowconf['idx'], weight=rowconf['weight'])
+
+
+               
+class ResourceMeta(object):
+    def __init__(self, parent):
+        '''
+ 
+        '''
+        
+        frameargs = {'borderwidth': 1, 'relief': 'groove', 'height': 50}
+        rowconf = {'idx': 0, 'weight': 1}
+        colconf = {'idx': 1, 'weight':1}
+        
+        frame = ttk.Frame(parent, **frameargs)
+        label = ttk.Label(frame, text='ppp')
+        label.grid(row=0, column=0)
+        print "Parent {}".format(parent)
+        # self.frames[len(self.frames)-1].grid(row=1, column=0, columnspan=2)
+        # self.frames[len(self.frames)-1].grid_propagate(0)
+        # ttk.Label(self.frames[len(self.frames)-1], text='ppp')
+        
+
+        # self.items = items
+        # for row, i in enumerate(items):
+            
+            
+        # self.parameter = parameter # resource id
+        
+        # self.frame = self._mk_frame(parentframe, position)
+        # self.name_d = StringVar()
+        # self.name = ttk.Entry(self.frame, textvariable=self.name_d)
+        # self.name.grid(column=0, row=0, sticky='NW')
         # self.description = Text(self.frame, wrap=WORD)
         # self.citation = Text(self.frame, wrap=WORD)
         # self.the_pub_d = StringVar()
@@ -183,11 +224,11 @@ class ResourceMeta(object):
         # self.the_pub.grid(column=0,row=4)
         # self.restype.grid(column=0,row=5)
                                                
-    def _mk_frame(self, parent, position):
-        print "Making Frame"
-        frame = ttk.Frame(parent, borderwidth=5, relief='ridge')
-        frame.grid(row=position[0], column=position[1], sticky='N')
-        return(frame)
+    # def _mk_frame(self, parent, position):
+    #     print "Making Frame"
+    #     frame = ttk.Frame(parent, borderwidth=5, relief='ridge')
+    #     frame.grid(row=position[0], column=position[1], sticky='N')
+    #     return(frame)
 
 def callback_orga(selected):
     package.refresh(selected['id'])
@@ -198,40 +239,77 @@ def callback_package(selected):
 url = 'http://localhost:5000'
 apikey = '948b0f87-d710-4cec-9979-d1ac2fd0d186'
 ckan = ckanapi.RemoteCKAN(url, apikey=apikey)
+
 root = Tk()
 root.title("Eawag RDM Resource Editor")
+
 # make resizable
 top = root.winfo_toplevel()
 top.columnconfigure(0, weight=1)
 top.rowconfigure(0, weight=1)
 
-# testframe = ttk.LabelFrame(root, text="LeftFrame", width=200, height=400)
-
-
-# testframe.grid(column=0, row=0, sticky=(N,W,E,S))
-# testframe.columnconfigure(0, weight=1)
-# testframe.rowconfigure(0, weight=1)
-
+# Paned Window ( left - right)
 window = ttk.PanedWindow(root, orient=HORIZONTAL)
-leftframe = ttk.Frame(window,width=400, height=300)
-#leftframe.columnconfigure(0, weight=1)
-leftframe.columnconfigure(2, weight=1)
+window.grid(row=0, column=0, sticky=(N,W,E,S))
 
-rightframe = ttk.Frame(window,width=400, height=300)
-# rightframe.grid(column=0, row=0)
-# leftframe.grid(column=1, row=0)
+# left and right Frames in Paned Window
+frameargs = {'width': 400, 'height': 300, 'borderwidth':1, 'relief': 'groove'}
+rowconf = {'idx': 10, 'weight':1}
+leftframe = AppFrame(window, [0,0], rowconf=rowconf,
+                     colconf={'idx': 2, 'weight': 1}, frameargs=frameargs)
+rightframe = AppFrame(window, [0,0], rowconf=rowconf,
+                     colconf={'idx': 0, 'weight': 1}, frameargs=frameargs)
+                                                               
+# Bottom Frames, left and right
+frameargs = {'borderwidth':1, 'relief': 'groove'}
+rowconf = {'idx': 0, 'weight': 1}
+bottomframe_left = AppFrame(leftframe, [10, 0], rowconf=rowconf,
+                            colconf={'idx': 2, 'weight': 1},
+                            frameargs=frameargs, columnspan=3, sticky='WES')
+bottomframe_right = AppFrame(rightframe, [10, 0], rowconf=rowconf,
+                            colconf={'idx': 0, 'weight': 1},
+                            frameargs=frameargs, columnspan=3, sticky='WES')
+
+# Selction widgets for Organization and Package
+organization = Organization('Organization', [0,0], leftframe, None,
+                            callback_orga, sticky='W')
+package = Package('Package', [0,1], leftframe, None,
+                  callback_package, sticky='W')
+
+# Upload Button
+upload = AppButton('UPLOAD', rightframe, [0, 2], None, sticky='E')
+
+# TreeView of Ressources
+ressource = Resource('Resources',[1,0], leftframe, None, None,
+                     columnspan=3, sticky ='NSWE')
+
+meta_ressources = ttk.Frame(rightframe, borderwidth=1, relief='groove')
+meta_ressources.grid(row=1, column=0, columnspan=3, sticky='WE')
+meta_ressources.columnconfigure(1, weight=1)
+label = ttk.Label(meta_ressources, text='WTFUCK')
+label.grid(row=1, column=0)
+entry = ttk.Entry(meta_ressources, text='hallo text')
+entry.grid(row=1, column=1, sticky='WE')
+check = ttk.Checkbutton(meta_ressources)
+check.grid(row=1, column=2, sticky='E')
+
+
+
+
+# Bottom Buttons
+delete_ressource =  AppButton('Delete\nRessource', bottomframe_left, [0,0], None, sticky='S')
+add_ressource =  AppButton('Add\nRessource', bottomframe_left, [0,1], None, sticky='S')
+
+add_ressource =  AppButton('Reset\nRessource', bottomframe_right, [0,1], None, sticky='S')
+add_ressource =  AppButton('Multi\nApply', bottomframe_right, [0,2], None, sticky='S')
+
 window.add(leftframe)
 window.add(rightframe)
-window.grid(row=0, column=0,sticky=(N,W,E,S))
 
-# leftframe.grid(column=0, row=0, sticky='WE')
-# rightframe.grid(column=0, row=0, sticky='WE')
 
-organization = Organization('Organization', [1,0], leftframe, None, callback_orga)
-package = Package('Package', [1,1], leftframe, None, callback_package)
-ressource = Resource('Resources',[2,0], leftframe, None, None)
-resmeta = ResourceMeta([2,3], rightframe, None)
 organization.refresh()
+
+
 
 
 
