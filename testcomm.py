@@ -1,5 +1,5 @@
 from Tkinter import *
-from tkinter import ttk
+import ttk
 import tkFont
 import ckanapi
 
@@ -132,6 +132,7 @@ class Resource(MyCombobox):
         for h in range(0,4):
             c.heading(h, text = ['Name', 'Type', 'Size', 'Modified'][h])
             c.column(h, stretch=True, width=colwidth[h])
+        c.column(3, anchor='e')
             #c.bind('<<ComboboxSelected>>', _callback_selected)
         # c.insert('',0, None, values = ['RESNAME', 'a type',
         #                                    'Giigabytes', '1970-01-01'])
@@ -170,13 +171,16 @@ class AppButton(object):
         print "Button: {} pressed!".format(self.label)
 
 class AppFrame(ttk.Frame):
-    def __init__(self, parent, position, rowconf, colconf, frameargs, **gridargs):
+    def __init__(self, parent, position, rowconf=None, colconf=None,
+                 frameargs={'borderwidth': 3}, **gridargs):
         print "FRAMEARGS: {}".format(frameargs)
         print "GRIDARGS: {}".format(gridargs)
         ttk.Frame.__init__(self, parent, **frameargs)
         self.grid(row=position[0], column=position[1], **gridargs)
-        self.columnconfigure(colconf['idx'], weight=colconf['weight'])
-        self.rowconfigure(rowconf['idx'], weight=rowconf['weight'])
+        if colconf:
+            self.columnconfigure(colconf['idx'], weight=colconf['weight'])
+        if rowconf:
+            self.rowconfigure(rowconf['idx'], weight=rowconf['weight'])
 
 
                
@@ -236,7 +240,8 @@ def callback_orga(selected):
 def callback_package(selected):
     ressource.refresh(selected['id'])
 
-url = 'http://localhost:5000'
+#url = 'http://localhost:5000'
+url = 'http://inf-vonwalha-pc:5000'
 apikey = '948b0f87-d710-4cec-9979-d1ac2fd0d186'
 ckan = ckanapi.RemoteCKAN(url, apikey=apikey)
 
@@ -253,20 +258,22 @@ window = ttk.PanedWindow(root, orient=HORIZONTAL)
 window.grid(row=0, column=0, sticky=(N,W,E,S))
 
 # left and right Frames in Paned Window
-frameargs = {'width': 400, 'height': 300, 'borderwidth':1, 'relief': 'groove'}
-rowconf = {'idx': 10, 'weight':1}
+frameargs = {'borderwidth':1, 'relief': 'groove'}
+rowconf = {'idx': 2, 'weight':1}
 leftframe = AppFrame(window, [0,0], rowconf=rowconf,
-                     colconf={'idx': 2, 'weight': 1}, frameargs=frameargs)
+                     colconf={'idx': 2, 'weight': 1},
+                     frameargs=frameargs)
 rightframe = AppFrame(window, [0,0], rowconf=rowconf,
-                     colconf={'idx': 0, 'weight': 1}, frameargs=frameargs)
+                      colconf={'idx': 0, 'weight': 1},
+                      frameargs=frameargs)
                                                                
 # Bottom Frames, left and right
 frameargs = {'borderwidth':1, 'relief': 'groove'}
 rowconf = {'idx': 0, 'weight': 1}
-bottomframe_left = AppFrame(leftframe, [10, 0], rowconf=rowconf,
+bottomframe_left = AppFrame(leftframe, [2, 0], rowconf=rowconf,
                             colconf={'idx': 2, 'weight': 1},
                             frameargs=frameargs, columnspan=3, sticky='WES')
-bottomframe_right = AppFrame(rightframe, [10, 0], rowconf=rowconf,
+bottomframe_right = AppFrame(rightframe, [2, 0], rowconf=rowconf,
                             colconf={'idx': 0, 'weight': 1},
                             frameargs=frameargs, columnspan=3, sticky='WES')
 
@@ -283,15 +290,43 @@ upload = AppButton('UPLOAD', rightframe, [0, 2], None, sticky='E')
 ressource = Resource('Resources',[1,0], leftframe, None, None,
                      columnspan=3, sticky ='NSWE')
 
-meta_ressources = ttk.Frame(rightframe, borderwidth=1, relief='groove')
-meta_ressources.grid(row=1, column=0, columnspan=3, sticky='WE')
-meta_ressources.columnconfigure(1, weight=1)
-label = ttk.Label(meta_ressources, text='WTFUCK')
-label.grid(row=1, column=0)
-entry = ttk.Entry(meta_ressources, text='hallo text')
-entry.grid(row=1, column=1, sticky='WE')
-check = ttk.Checkbutton(meta_ressources)
-check.grid(row=1, column=2, sticky='E')
+# MetaData for selected Resource
+meta_ressources = ttk.Frame(rightframe, borderwidth=0, relief='flat')
+meta_ressources.grid(row=1, column=0, columnspan=3, sticky='WENS')
+meta_ressources.columnconfigure(1, weight=3)
+meta_ressources.rowconfigure(10, weight=1)
+
+# def __init__(self, parent, position, rowconf, colconf, frameargs, **gridargs):
+# Name
+# f1=AppFrame(meta_ressources, [0, 0], colconf={'idx':1, 'weight': 1},
+#             frameargs={'relief': 'flat', 'padding': 10},
+#             sticky='WE', columnspan=3)
+
+label0 = ttk.Label(meta_ressources, text='Name:')
+label0.grid(row=0, column=0, sticky='W')
+f0=AppFrame(meta_ressources,[0, 1],  colconf={'idx':0, 'weight': 1},
+             frameargs={'relief': 'flat', 'padding': 10}, sticky='WE')
+name = ttk.Entry(f0, text='', width=30)
+name.grid(row=0, column=0, sticky='WE')
+
+check0 = ttk.Checkbutton(meta_ressources)
+check0.grid(row=0, column=2, sticky='E')
+
+# Deescription
+label1 = ttk.Label(meta_ressources, text='Description:')
+label1.grid(row=1, column=0, sticky='WN')
+f1=AppFrame(meta_ressources,[1, 1],  colconf={'idx':0, 'weight': 1},
+             frameargs={'relief': 'flat', 'padding': 10}, sticky='WE')
+description = Text(f1, width=50, height=10, relief='flat',
+             padx=5, pady=5, wrap=WORD)
+description.grid(row=0, column=0, sticky='NWE')
+check1 = ttk.Checkbutton(meta_ressources)
+check1.grid(row=1, column=2, sticky='E')
+
+
+window.add(leftframe)
+window.add(rightframe)
+
 
 
 
@@ -303,8 +338,6 @@ add_ressource =  AppButton('Add\nRessource', bottomframe_left, [0,1], None, stic
 add_ressource =  AppButton('Reset\nRessource', bottomframe_right, [0,1], None, sticky='S')
 add_ressource =  AppButton('Multi\nApply', bottomframe_right, [0,2], None, sticky='S')
 
-window.add(leftframe)
-window.add(rightframe)
 
 
 organization.refresh()
