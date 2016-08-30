@@ -156,14 +156,15 @@ class Resource(MyCombobox):
             self.c.insert('', 'end', values = [v['name'], v['type'],
                                                v['size'], v['modified']])
 class AppButton(object):
-    def __init__(self, label, parent, position, pic, **gridargs):
+    def __init__(self, label, parent, position, pic, buttonargs={}, **gridargs):
         self.label = label
-        self.b = self._mk_button(label, parent, position, pic, gridargs)
+        self.b = self._mk_button(label, parent, position, pic,
+                                 buttonargs, gridargs)
 
 
-    def _mk_button(self, label, parent, position, pic, gridargs):
+    def _mk_button(self, label, parent, position, pic, buttonargs, gridargs):
         b = ttk.Button(parent, compound=LEFT, image=pic, text=label,
-                       command=self.button_press)
+                       command=self.button_press, **buttonargs)
         b.grid(row=position[0], column=position[1], **gridargs)
         print "Button - row {}, column {}".format(position[0], position[1])
         
@@ -184,61 +185,13 @@ class AppFrame(ttk.Frame):
 
 
                
-class ResourceMeta(object):
-    def __init__(self, parent):
-        '''
- 
-        '''
-        
-        frameargs = {'borderwidth': 1, 'relief': 'groove', 'height': 50}
-        rowconf = {'idx': 0, 'weight': 1}
-        colconf = {'idx': 1, 'weight':1}
-        
-        frame = ttk.Frame(parent, **frameargs)
-        label = ttk.Label(frame, text='ppp')
-        label.grid(row=0, column=0)
-        print "Parent {}".format(parent)
-        # self.frames[len(self.frames)-1].grid(row=1, column=0, columnspan=2)
-        # self.frames[len(self.frames)-1].grid_propagate(0)
-        # ttk.Label(self.frames[len(self.frames)-1], text='ppp')
-        
-
-        # self.items = items
-        # for row, i in enumerate(items):
-            
-            
-        # self.parameter = parameter # resource id
-        
-        # self.frame = self._mk_frame(parentframe, position)
-        # self.name_d = StringVar()
-        # self.name = ttk.Entry(self.frame, textvariable=self.name_d)
-        # self.name.grid(column=0, row=0, sticky='NW')
-        # self.description = Text(self.frame, wrap=WORD)
-        # self.citation = Text(self.frame, wrap=WORD)
-        # self.the_pub_d = StringVar()
-        # self.the_pub = ttk.Checkbutton(self.frame,
-        #                                        text = "The Package?",
-        #                                        variable = self.the_pub_d)
-        # self.restype_d = StringVar()
-        # self.restype = ttk.Combobox(self.frame, textvariable=self.restype_d,
-        #                             state='readonly')
-        # self.name.grid(column=0, row=1)
-        # self.description.grid(column=0,row=2)
-        # self.citation.grid(column=0,row=3)
-        # self.the_pub.grid(column=0,row=4)
-        # self.restype.grid(column=0,row=5)
-                                               
-    # def _mk_frame(self, parent, position):
-    #     print "Making Frame"
-    #     frame = ttk.Frame(parent, borderwidth=5, relief='ridge')
-    #     frame.grid(row=position[0], column=position[1], sticky='N')
-    #     return(frame)
 
 def callback_orga(selected):
     package.refresh(selected['id'])
 
 def callback_package(selected):
     ressource.refresh(selected['id'])
+
 
 #url = 'http://localhost:5000'
 url = 'http://inf-vonwalha-pc:5000'
@@ -247,6 +200,10 @@ ckan = ckanapi.RemoteCKAN(url, apikey=apikey)
 
 root = Tk()
 root.title("Eawag RDM Resource Editor")
+s = ttk.Style()
+s.theme_use('clam')
+
+
 
 # make resizable
 top = root.winfo_toplevel()
@@ -258,7 +215,7 @@ window = ttk.PanedWindow(root, orient=HORIZONTAL)
 window.grid(row=0, column=0, sticky=(N,W,E,S))
 
 # left and right Frames in Paned Window
-frameargs = {'borderwidth':1, 'relief': 'groove'}
+frameargs = {'borderwidth':1, 'relief': 'flat'}
 rowconf = {'idx': 2, 'weight':1}
 leftframe = AppFrame(window, [0,0], rowconf=rowconf,
                      colconf={'idx': 2, 'weight': 1},
@@ -268,7 +225,7 @@ rightframe = AppFrame(window, [0,0], rowconf=rowconf,
                       frameargs=frameargs)
                                                                
 # Bottom Frames, left and right
-frameargs = {'borderwidth':1, 'relief': 'groove'}
+frameargs = {'borderwidth':1, 'relief': 'flat'}
 rowconf = {'idx': 0, 'weight': 1}
 bottomframe_left = AppFrame(leftframe, [2, 0], rowconf=rowconf,
                             colconf={'idx': 2, 'weight': 1},
@@ -284,7 +241,14 @@ package = Package('Package', [0,1], leftframe, None,
                   callback_package, sticky='W')
 
 # Upload Button
-upload = AppButton('UPLOAD', rightframe, [0, 2], None, sticky='E')
+s.configure('Upload.TButton', font=('helvetica', 10, 'bold'),
+            background='#B4E4B6', bordercolor='#B4E4B6')
+s.map('Upload.TButton', background=[('active', '#67E06C'),
+                                    ('pressed','#4BA34F'),
+                                    ('disabled','grey')])
+upload = AppButton('UPLOAD', rightframe, [0, 2], None,
+                   buttonargs={'style': 'Upload.TButton'},
+                   sticky='E', pady=10, padx=5)
 
 # TreeView of Ressources
 ressource = Resource('Resources',[1,0], leftframe, None, None,
@@ -293,36 +257,79 @@ ressource = Resource('Resources',[1,0], leftframe, None, None,
 # MetaData for selected Resource
 meta_ressources = ttk.Frame(rightframe, borderwidth=0, relief='flat')
 meta_ressources.grid(row=1, column=0, columnspan=3, sticky='WENS')
-meta_ressources.columnconfigure(1, weight=3)
-meta_ressources.rowconfigure(10, weight=1)
+meta_ressources.columnconfigure(1, weight=1)
+meta_ressources.rowconfigure(1, weight=1)
 
-# def __init__(self, parent, position, rowconf, colconf, frameargs, **gridargs):
+
+
+class ResMetaLabel(ttk.Label):
+
+    labelfont = 'helveticva 9 bold'
+            
+    def __init__(self, label, parent, row):
+
+        self.label =  ttk.Label(parent, text=label, font=ResMetaLabel.labelfont)
+        self.label.grid(row=row, column=0, sticky='W')
+    
+
+class ResMetaItem(object):
+    def __init__(self, parent, position, itemargs={}):
+        if not itemargs:
+            self.itemargs = {'text': '', 'width': 30}
+        else:
+            self.entryargs = entryargs
+        self.frame_colconf = {'idx': 0, 'weight': 1}
+        self.frame_args={'relief': 'flat', 'padding': 10}
+        self.frame_gridargs = {'sticky': 'WE', 'columnspan': 2}
+        self.frame = AppFrame(parent, position, colconf=self.frame_colconf,
+                         frameargs=self.frame_args, **self.frame_gridargs)
+
+        self.item = self._mk_item(self.frame, itemargs)
+        self.check = ttk.Checkbutton(self.frame)
+        self.check.grid(row=0, column=1, padx=6)
+        
+    def _mk_item(self, f, itemargs):
+        pass
+
+
+class ResMetaEntry(ResMetaItem):
+    def __init__(self, parent, position, itemargs={}):
+        super(ResMetaEntry, self).__init__(parent, position, itemargs)
+
+    def _mk_item(self, f, itemargs):
+        item = ttk.Entry(self.frame, **itemargs)
+        item.grid(row=0, column=0, sticky='WE')
+        return(item)
+
+class ResMetaText(ResMetaItem):
+    def __init__(self, parent, position, itemargs={}):
+        super(ResMetaEntry, self).__init__(parent, position, itemargs)
+    def _mk_item(self, 
+    
 # Name
-# f1=AppFrame(meta_ressources, [0, 0], colconf={'idx':1, 'weight': 1},
-#             frameargs={'relief': 'flat', 'padding': 10},
-#             sticky='WE', columnspan=3)
+ResMetaLabel('Name:', meta_ressources, 0)
+ResMetaEntry(meta_ressources, [0,1])
 
-label0 = ttk.Label(meta_ressources, text='Name:')
-label0.grid(row=0, column=0, sticky='W')
-f0=AppFrame(meta_ressources,[0, 1],  colconf={'idx':0, 'weight': 1},
-             frameargs={'relief': 'flat', 'padding': 10}, sticky='WE')
-name = ttk.Entry(f0, text='', width=30)
-name.grid(row=0, column=0, sticky='WE')
+Description
+ResMetaLabel('Description:', meta_ressources, 1)
+ResMetaEntry(meta_ressources, [0,2])
 
-check0 = ttk.Checkbutton(meta_ressources)
-check0.grid(row=0, column=2, sticky='E')
-
-# Deescription
-label1 = ttk.Label(meta_ressources, text='Description:')
-label1.grid(row=1, column=0, sticky='WN')
-f1=AppFrame(meta_ressources,[1, 1],  colconf={'idx':0, 'weight': 1},
-             frameargs={'relief': 'flat', 'padding': 10}, sticky='WE')
+# label1 = ttk.Label(meta_ressources, text='Description:',font='helveticva 9 bold')
+# label1.grid(row=1, column=0, sticky='WN')
+f1=AppFrame(meta_ressources, [2, 0],  colconf={'idx':0, 'weight': 1},
+            frameargs={'relief': 'flat', 'padding': 0}, sticky='WE',
+            columnspan=3)
 description = Text(f1, width=50, height=10, relief='flat',
-             padx=5, pady=5, wrap=WORD)
+                   wrap=WORD)
 description.grid(row=0, column=0, sticky='NWE')
-check1 = ttk.Checkbutton(meta_ressources)
-check1.grid(row=1, column=2, sticky='E')
+check1 = ttk.Checkbutton(f1, padding=3)
+check1.grid(row=0, column=1, padx=16)
 
+
+
+
+
+#################################################################################
 
 window.add(leftframe)
 window.add(rightframe)
@@ -341,6 +348,8 @@ add_ressource =  AppButton('Multi\nApply', bottomframe_right, [0,2], None, stick
 
 
 organization.refresh()
+
+
 
 
 
