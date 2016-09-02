@@ -26,6 +26,10 @@
 # Split file(s) if file is too large ( > 4GB ) in smaller chunks for upload.
 # Calculate hash digest
 # Remove ressource named "dummy"
+#
+# Read a definition-file in the given directory to:
+#    + select files using a regex
+#    + assign meta-data based on regex selection for individual fields
 # 
 #
 # CKAN TODO: Add ressource type: Compound (for tar archives with multiple types)
@@ -49,6 +53,8 @@
 
 import ckanapi
 import argparse
+from yaml import load as yload
+import re
 import sys
 import os
 import io
@@ -67,18 +73,21 @@ class Parser(object):
         
         pa_put.add_argument('pkg_name', metavar='PACKAGENAME', type=str,
                         help='Name of the data package')
-        pa_put.add_argument('dir', metavar='DIRECTORY', type=str, nargs='?',
+        pa_put.add_argument('directory', metavar='DIRECTORY', type=str, nargs='?',
                         default=os.curdir,
                         help='The top-level directory containing the ressources '+
                         'to be uploaded. Default is the current working directory.')
         pa_put.add_argument('-tar', action='store_true', help='create a tar archive')
         pa_put.add_argument('-gz', action='store_true', help='gzip the file(s) before upload')
+        pa_put.add_argument('-keepdummy', action='store_true',
+                            help='do not delete the ressource \'dummy\', if present, '+
+                            'from package. The default is to delete it.')
         
         # get subcommand
         pa_get = subparsers.add_parser('get', help='download ressources')
         pa_get.add_argument('pkg_name', metavar='PACKAGENAME', type=str,
                         help='Name of the data package')
-        pa_get.add_argument('dir', metavar='DIRECTORY', type=str, nargs='?',
+        pa_get.add_argument('directory', metavar='DIRECTORY', type=str, nargs='?',
                         default=os.curdir,
                         help='Directory into which ressources are downloaded. ' +
                         'Default is the current working directory.')
@@ -89,11 +98,62 @@ class Parser(object):
         arguments = vars(self.pa.parse_args())
         return arguments
 
-p = Parser()
-args = p.parse(sys.argv)
 
-print args
-# print pa.parse_args(['get', 'direc'])
-# 
+class Put(object):
+    
+    def __init__(self, args):
+        self.pkg_name = args['pkg_name']
+        self.directory = args['directory']
+        self.gz = args['gz']
+        self.tar = args['tar']
+        self.allfiles = os.listdir(self.directory)
+        self.exceptfiles = [f for f in self.allfiles
+                            if not re.match('.*\.(yaml|yml)', f)]
+        self.metadata = self._assign_metadata()
+        print self.metadata
+        
+    def _assign_metadata(self):
+        default_meta = {
+            'citation': '',
+            'description': '',
+            'filename': '',
+            'name': '',
+            'resource_type': 'Data_Set',
+            'the_publication': False
+        }
+        print self.allfiles
+        metadata = [dict(default_meta)
+                    for f in self.allfiles] # if f not in self.exceptfiles]
+        return metadata
+    
+# update({'filename': f, 'name': f})
+        
+              
+
+# def checkargs():
+#     p = Parser()
+#     print p.parse(sys.argv)
+
+# #checkargs()
+
+# args = {'subcmd': 'put', 'pkg_name': 'test-the-bulk-upload', 'keepdummy': False,
+#         'directory': '/home/vonwalha/tmp/test_resup', 'tar': False, 'gz': False}
+pa = Parser()
+args = pa.parse(sys.argv)
+put =Put(args)
+
+
+# put = Put(args)
+
+
+# if __name__ == '__main__':
+#     pass
+    
+
+
+
+with open('/home/vonwalha/tmp/test_resup/metadata.yaml', 'r') as f:
+    test = yload(f)
+
 
 
