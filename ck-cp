@@ -4,7 +4,7 @@
 
 ### adapt this to your setup #####################################
 # default hosts used for "-d direction (in|out)" syntax
-remote="http://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
+remote="https://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch"
 local="http://localhost:5000"
 
 # Env. variables containing the API-KEYS for remote- and local-host. 
