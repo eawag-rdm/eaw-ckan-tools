@@ -62,8 +62,11 @@ import os
 import io
 import tarfile
 import gzip
+import shutil
 
-HOST = 'http://localhost:5000'
+#HOST = 'http://localhost:5000'
+HOST = 'http://inf-vonwalha-pc.eawag.wroot.emp-eaw.ch:5000'
+MAXFILESIZE = 1.5 * 2**20 # max filesize: 1.5 Mb
 MAXFILESIZE = 1.5 * 2**30 # max filesize: 4Gb
 CHUNKSIZE = 4 * 2**10   # for tuning
 
@@ -220,28 +223,38 @@ class Put(object):
         self.metadata[filename]['hash'] = digest
 
     def upload(self, connection):
-        
+        if self.gz:
+            gzdir = os.path.join(self.directory, '_gz')
+            os.mkdir(gzdir)
+            print gzdir
+            for f in self.metadata.keys():
+                fn_out = os.path.join(gzdir, os.path.basename(f) + '.gz')
+                print fn_out
+                with open(f, 'rb') as fin, gzip.open(fn_out, 'wb') as fout:
+                    shutil.copyfileobj(fin, fout)
+                self.metadata[fn_out] = self.metadata[f]
+                self.metadata[fn_out].update({'name': os.path.basename(fn_out)})
+                del self.metadata[f]
+            print self.metadata
+                
         if self.tar:
             tfname = os.path.join(self.directory,
-                            '{}.tar'.format(os.path.basename(self.directory)))
+                                  '{}.tar'.format(os.path.basename(self.directory)))
             print 'Creating tar-archive: {}'.format(tfname)
             with tarfile.open(tfname, 'w') as tf:
                 for f in self.resourcefiles:
                     tf.add(f)
-            self.metadata = {tfname: self._mk_meta_default(tfname)}
-            self.resourcefiles = tfname
+                self.metadata = {tfname: self._mk_meta_default(tfname)}
+                self.resourcefiles = tfname
 
-        if self.gz:
-            for f in self.resourcefiles:
-                pass
                 
         
         # Do not iterate over self.metadata - that gets changed during splitting
-        for f in self.resourcefiles:
-            if os.stat(f).st_size > MAXFILESIZE:
-                self._split_file(f, MAXFILESIZE)
-        for f in self.metadata.keys():
-            self.sha256(f)
+        # for f in self.resourcefiles:
+        #     if os.stat(f).st_size > MAXFILESIZE:
+        #         self._split_file(f, MAXFILESIZE)
+        # for f in self.metadata.keys():
+        #     self.sha256(f)
         
                 
             
@@ -262,8 +275,8 @@ class Put(object):
 # #checkargs()
 
 args = {'subcmd': 'put', 'pkg_name': 'test-the-bulk-upload',
-        'keepdummy': False, 'directory': '/home/vonwalha/tmp/test_resup',
-        'tar': True, 'gz': False}
+        'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup',
+        'tar': False, 'gz': True}
 # pa = Parser()
 # args = pa.parse(sys.argv)
 print "Arguments = {}".format(args)
