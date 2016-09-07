@@ -8,6 +8,7 @@
 # Options:
 #    -tar tar the directory-tree into one archive-file
 #         if not given, upload each file individually
+
 #    -gz  gzip each individual file first, in case it is not yet compressed
 #
 #    -get downloads ressources and assembles them if necessary
@@ -34,6 +35,7 @@
 #
 # CKAN TODO: Add ressource type: Compound (for tar archives with multiple types)
 #            Add meta-data to indicate a split ressource.
+#            Display file size in web-UI
 #
 #
 # Extra functions:
@@ -55,7 +57,7 @@ import ckanapi
 import argparse
 import hashlib
 import time
-from yaml import load as yload
+#from yaml import load as yload
 import re
 import sys
 import os
@@ -66,8 +68,8 @@ import shutil
 
 #HOST = 'http://localhost:5000'
 HOST = 'http://inf-vonwalha-pc.eawag.wroot.emp-eaw.ch:5000'
-MAXFILESIZE = 70 * 2**20 # max filesize: 1.5 Mb
-#MAXFILESIZE = 1.5 * 2**30 # max filesize: 4Gb
+MAXFILESIZE = 10 * 2**20 # max filesize: 10Mb
+#MAXFILESIZE = 4 * 2**30 # max filesize: 4Gb
 CHUNKSIZE = 4 * 2**10   # for tuning
 
 class Connection(object):
@@ -112,9 +114,10 @@ class Parser(object):
                             help='Name of the data package')
   
         pa_put.add_argument('directory', metavar='DIRECTORY', type=str, nargs='?',
-                        default=os.curdir,
-                        help='The top-level directory containing the ressources '+
-                        'to be uploaded. Default is the current working directory.')
+                            default=os.curdir,
+                            help='The directory containing the ressources '+
+                            'to be uploaded. Default is the current working ' +
+                            'directory. Subdirectories are ignored.')
 
 
         pa_put.add_argument('--tar', action='store_true', help='create a tar archive')
@@ -149,6 +152,7 @@ class Put(object):
         self.directory = os.path.normpath(args['directory'])
         self.gz = args['gz']
         self.tar = args['tar']
+        self.keepdummy = args['keepdummy']
         allfiles = [os.path.normpath(os.path.join(self.directory, f))
                     for f in os.listdir(self.directory)
                     if os.path.isfile(os.path.normpath(
@@ -260,10 +264,18 @@ class Put(object):
         self.metadata = {fn_out: self._mk_meta_default(fn_out)}
 
     def _upload(self, conn):
-        for res in self.metadata.keys():
-            print "uploading {}".format(res)
+        for res in sorted(self.metadata.keys()):
+            self.metadata[res]['size'] = os.stat(res).st_size
+            print "uploading {} ({})".format(res, self.metadata[res]['size'])
             conn.call_action('resource_create', self.metadata[res],
                                 files={'upload': open(res, 'rb')})
+
+    def del_resources(self, conn, delres):
+        pkg = conn.call_action('package_show', {'id': pkgname})
+        resources = [(res['name'], res['id']) for res in pkg['resources']]
+        delids = [r[1] for r in resources if (r[0] in delres) or (delres == 'all')]
+        for rid in delids:
+            c.call_action('resource_delete', {'id': rid})
 
     def upload(self, connection):
         if self.gz:
@@ -273,21 +285,41 @@ class Put(object):
         self._split_files()
         self._sha256()
         self._upload(connection)
+        if not self.keepdummy:
+            self.del_resources(connection, ['dummy'])
 
 
-                
+class Get(object):
+    def __init__(self, args):
+        self.pkg_name = args['pkg_name']
+        self.directory = os.path.normpath(args['directory'])
+        
+    def get(self):
+        #print self.__dict__
+        # check if directory writeable
+        # get ids and names of all resources
+        # collect into basefilename -> list of ids
+          # consider (rename) duplicate resource names
+        # download & concatenate
+        
 
-args = {'subcmd': 'put', 'pkg_name': 'test-the-bulk-upload',
-        'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup',
-        'tar': False, 'gz': True}
-# pa = Parser()
-# args = pa.parse(sys.argv)
+args = {'subcmd': 'get', 'pkg_name': 'test-the-bulk-upload',
+        'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup/get',
+        'tar': False, 'gz': False}
+
+if __name__ == '__main__':
+    pa = Parser()
+    args = pa.parse(sys.argv)
+    
 print "Arguments = {}".format(args)
+
 c = Connection(args).get_connection()
 if args['subcmd'] == 'put':
     put = Put(args)
     put.upload(c)
-
+if args['subcmd'] == 'get':
+    get = Get(args)
+    get.get()
 
 # put = Put(args)
 
