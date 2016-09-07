@@ -66,8 +66,8 @@ import shutil
 
 #HOST = 'http://localhost:5000'
 HOST = 'http://inf-vonwalha-pc.eawag.wroot.emp-eaw.ch:5000'
-MAXFILESIZE = 1.5 * 2**20 # max filesize: 1.5 Mb
-MAXFILESIZE = 1.5 * 2**30 # max filesize: 4Gb
+MAXFILESIZE = 70 * 2**20 # max filesize: 1.5 Mb
+#MAXFILESIZE = 1.5 * 2**30 # max filesize: 4Gb
 CHUNKSIZE = 4 * 2**10   # for tuning
 
 class Connection(object):
@@ -84,6 +84,9 @@ class Connection(object):
         server = args.get('s') or [HOST]
         server = server[0]
         self.conn = ckanapi.RemoteCKAN(server, apikey=apikey)
+
+    def get_connection(self):
+        return self.conn
     
 class Parser(object):
     def __init__(self):
@@ -159,22 +162,20 @@ class Put(object):
 
     def _mk_meta_default(self, fn):
         default_meta = {
+            'package_id': self.pkg_name,
             'citation': '',
             'description': '',
             'name': '',
             'resource_type': 'Data_Set',
-            'publication': False
+            'publication': False,
+            'url': ''
         }
         metadict = dict(default_meta)
         metadict.update({'name': os.path.basename(fn)})
         return metadict
 
     
-    def _split_file(self, filename, maxsize):
-        chunksize = CHUNKSIZE
-        partsdir = os.path.join(self.directory, '_parts')
-        if not os.path.exists(partsdir):
-            os.mkdir(partsdir)
+    def _split_files(self):
 
         def newpartsfile(oldfile, count):
             if oldfile:
@@ -185,94 +186,96 @@ class Put(object):
                                      os.path.basename(filename) +
                                      '_part_{:0=4}'.format(count))
             fpart = open(partsname, 'wb')
-            print "writing new parts-file: {}".format(partsname)
+            print "    writing new parts-file: {}".format(partsname)
             self.partfiles[filename].append(partsname)
             return(fpart)
 
         def update_part_metadata(filename):
             for fpart in self.partfiles[filename]:
-                self.metadata[fpart] = self._mk_meta_default(fpart)
+                self.metadata[fpart] = dict(self.metadata[filename])
+                self.metadata[fpart]['name'] = os.path.basename(fpart)
             del self.metadata[filename]
 
-        cur_partsfile = newpartsfile(None, 0)
-        cur_size = 0
-        count = 0
-        with open(filename, 'rb') as f:
-            for chunk in iter(lambda: f.read(chunksize), b''):
-                cur_size += chunksize
-                if cur_size > maxsize:
-                    count += 1
-                    cur_partsfile = newpartsfile(cur_partsfile, count)
-                    cur_size = chunksize
-                cur_partsfile.write(chunk)
-            cur_partsfile.close()
-        update_part_metadata(filename)
+        maxsize = MAXFILESIZE
+        chunksize = CHUNKSIZE
+        partsdir = os.path.join(self.directory, '_parts')
+        if not os.path.exists(partsdir):
+            os.mkdir(partsdir)
+        
+        for filename in [f for f in self.metadata.keys()
+                         if os.stat(f).st_size > maxsize]:
+            print "splitting {}".format(filename)
+            cur_partsfile = newpartsfile(None, 0)
+            cur_size = 0
+            count = 0
+            with open(filename, 'rb') as f:
+                for chunk in iter(lambda: f.read(chunksize), b''):
+                    cur_size += chunksize
+                    if cur_size > maxsize:
+                        count += 1
+                        cur_partsfile = newpartsfile(cur_partsfile, count)
+                        cur_size = chunksize
+                    cur_partsfile.write(chunk)
+                cur_partsfile.close()
+            update_part_metadata(filename)
 
-    def sha256(self, filename):
-        hash_sha = hashlib.sha256()
-        print "Calculating checksum for {} ...".format(filename)
-        t0 = time.time()
-        with open(filename, 'rb') as f:
-            for chunk in iter(lambda: f.read(8192), b''):
-                hash_sha.update(chunk)
-        digest = hash_sha.hexdigest()
-        deltat = time.time() - t0
-        print "time: {} seconds".format(deltat)
-        print 'sha256: {}'.format(digest)
-        print
-        self.metadata[filename]['hash'] = digest
+    def _sha256(self):
+        for filename in self.metadata.keys():
+            hash_sha = hashlib.sha256()
+            print "Calculating checksum for {} ...".format(filename)
+            t0 = time.time()
+            with open(filename, 'rb') as f:
+                for chunk in iter(lambda: f.read(8192), b''):
+                    hash_sha.update(chunk)
+            digest = hash_sha.hexdigest()
+            deltat = time.time() - t0
+            print "    time: {} seconds".format(deltat)
+            print '    sha256: {}'.format(digest)
+            self.metadata[filename]['hash'] = digest
+
+    def _gnuzip(self):
+        gzdir = os.path.join(self.directory, '_gz')
+        if not os.path.exists(gzdir):
+            os.mkdir(gzdir)
+        for f in self.metadata.keys():
+            fn_out = os.path.join(gzdir, os.path.basename(f) + '.gz')
+            print 'compressing {} ...'.format(f)
+            with open(f, 'rb') as fin, gzip.open(fn_out, 'wb') as fout:
+                shutil.copyfileobj(fin, fout)
+            self.metadata[fn_out] = self.metadata[f]
+            self.metadata[fn_out].update({'name': os.path.basename(fn_out)})
+            del self.metadata[f]
+
+    def _tar(self):
+        tardir = os.path.join(self.directory, '_tar')
+        if not os.path.exists(tardir):
+            os.mkdir(tardir)
+        fn_out = os.path.join(tardir,
+                              os.path.basename(self.directory) +'.tar')
+        print 'Creating tar-archive: {}'.format(fn_out)
+        with tarfile.open(fn_out, 'w') as tf:
+            for f_in in self.metadata.keys():
+                print '    adding file {}'.format(f_in)
+                tf.add(f_in)
+        self.metadata = {fn_out: self._mk_meta_default(fn_out)}
+
+    def _upload(self, conn):
+        for res in self.metadata.keys():
+            print "uploading {}".format(res)
+            conn.call_action('resource_create', self.metadata[res],
+                                files={'upload': open(res, 'rb')})
 
     def upload(self, connection):
         if self.gz:
-            gzdir = os.path.join(self.directory, '_gz')
-            os.mkdir(gzdir)
-            print gzdir
-            for f in self.metadata.keys():
-                fn_out = os.path.join(gzdir, os.path.basename(f) + '.gz')
-                print fn_out
-                with open(f, 'rb') as fin, gzip.open(fn_out, 'wb') as fout:
-                    shutil.copyfileobj(fin, fout)
-                self.metadata[fn_out] = self.metadata[f]
-                self.metadata[fn_out].update({'name': os.path.basename(fn_out)})
-                del self.metadata[f]
-            print self.metadata
-                
+            self._gnuzip()    
         if self.tar:
-            tfname = os.path.join(self.directory,
-                                  '{}.tar'.format(os.path.basename(self.directory)))
-            print 'Creating tar-archive: {}'.format(tfname)
-            with tarfile.open(tfname, 'w') as tf:
-                for f in self.resourcefiles:
-                    tf.add(f)
-                self.metadata = {tfname: self._mk_meta_default(tfname)}
-                self.resourcefiles = tfname
+            self._tar()
+        self._split_files()
+        self._sha256()
+        self._upload(connection)
+
 
                 
-        
-        # Do not iterate over self.metadata - that gets changed during splitting
-        # for f in self.resourcefiles:
-        #     if os.stat(f).st_size > MAXFILESIZE:
-        #         self._split_file(f, MAXFILESIZE)
-        # for f in self.metadata.keys():
-        #     self.sha256(f)
-        
-                
-            
-           
-    
-            
-        
-        
-# 1048576
-# update({'filename': f, 'name': f})
-        
-              
-
-# def checkargs():
-#     p = Parser()
-#     print p.parse(sys.argv)
-
-# #checkargs()
 
 args = {'subcmd': 'put', 'pkg_name': 'test-the-bulk-upload',
         'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup',
@@ -280,7 +283,7 @@ args = {'subcmd': 'put', 'pkg_name': 'test-the-bulk-upload',
 # pa = Parser()
 # args = pa.parse(sys.argv)
 print "Arguments = {}".format(args)
-c = Connection(args)
+c = Connection(args).get_connection()
 if args['subcmd'] == 'put':
     put = Put(args)
     put.upload(c)
