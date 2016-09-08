@@ -65,6 +65,7 @@ import io
 import tarfile
 import gzip
 import shutil
+from pprint import pprint
 
 #HOST = 'http://localhost:5000'
 HOST = 'http://inf-vonwalha-pc.eawag.wroot.emp-eaw.ch:5000'
@@ -312,13 +313,13 @@ def del_resources(args):
     pkg_name = args['pkg_name']
     conn = args['connection']
     resources = args['resources']
-    check_package(conn, pkg_name)
+    check_package(args)
     pkg = conn.call_action('package_show', {'id': pkg_name})
     allres = [(res['name'], res['id']) for res in pkg['resources']]
-    delids = [r[1] for r in allres if re.match(resources, r[0])]
-    for rid in delids:
-        print "DELETING Resources: {}".format(delres)
-        #c.call_action('resource_delete', {'id': rid})
+    delres = [(r[0], r[1]) for r in allres if re.match(resources, r[0])]
+    for r in delres:
+        print "DELETING Resources: {}".format(r[0])
+        c.call_action('resource_delete', {'id': r[1]})
 
 def check_package(args):
     conn = args['connection']
@@ -326,8 +327,22 @@ def check_package(args):
     pkgs = conn.call_action('package_list')
     if pkgname not in pkgs:
         sys.exit('No package "{}" found. Aborting.'.format(pkgname))
-    return pkgs
+
+
+def list_packages(args):
+    conn = args['connection']
+    orgas = conn.call_action('organization_list_for_user',
+                             {'permission': 'update_dataset'})
+    oids = [o['id'] for o in orgas]
+    searchquery = '('+' OR '.join(['owner_org:{}'.format(oid) for oid in oids]) + ')'
+    res = conn.call_action('package_search', {'q': searchquery,
+                                              'include_drafts': True,
+                                              'rows': 1000,
+                                              'include_private': True})['results']
+    pkgs = [p['name'] for p in res]
+    pprint(pkgs)
     
+
 
 args = {'subcmd': 'get', 'pkg_name': 'test-the-bulk-upload',
         'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup/get',
@@ -351,7 +366,7 @@ if args['subcmd'] == 'get':
 if args['subcmd'] == 'del':
     del_resources(args)
 if args['subcmd'] == 'list':
-    print check_package(args)
+    list_packages(args)
     
 
 
