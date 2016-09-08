@@ -139,6 +139,15 @@ class Parser(object):
         # list subcommand
         pa_list = subparsers.add_parser('list', help='list your packages', parents=[papa])
 
+        # delete subcommand
+        pa_del = subparsers.add_parser('del', help='delete resources', parents=[papa])
+        pa_del.add_argument('pkg_name', metavar='PACKAGENAME', type=str,
+                            help='Name of the data package')
+        pa_del.add_argument('resources', metavar='RESOURCES', type=str, nargs='?',
+                            default='.*',
+                            help='The name of the resource to be deleted or ' +
+                            'a regular expression that matches the resources ' +
+                            'to be deleted, e.g. \".*\" (the default!)')
         
     def parse(self, arglist):
         arguments = vars(self.pa.parse_args())
@@ -263,45 +272,62 @@ class Put(object):
                 tf.add(f_in)
         self.metadata = {fn_out: self._mk_meta_default(fn_out)}
 
-    def _upload(self, conn):
+    def _upload(self):
         for res in sorted(self.metadata.keys()):
             self.metadata[res]['size'] = os.stat(res).st_size
             print "uploading {} ({})".format(res, self.metadata[res]['size'])
-            conn.call_action('resource_create', self.metadata[res],
+            self.connection.call_action('resource_create', self.metadata[res],
                                 files={'upload': open(res, 'rb')})
 
-    def del_resources(self, conn, delres):
-        pkg = conn.call_action('package_show', {'id': pkgname})
-        resources = [(res['name'], res['id']) for res in pkg['resources']]
-        delids = [r[1] for r in resources if (r[0] in delres) or (delres == 'all')]
-        for rid in delids:
-            c.call_action('resource_delete', {'id': rid})
-
-    def upload(self, connection):
+    def upload(self):
         if self.gz:
             self._gnuzip()    
         if self.tar:
             self._tar()
         self._split_files()
         self._sha256()
-        self._upload(connection)
+        self._upload()
         if not self.keepdummy:
-            self.del_resources(connection, ['dummy'])
+            self.del_resources(self.connection, ['dummy'])
 
 
+
+                 
 class Get(object):
     def __init__(self, args):
+        check_package
         self.pkg_name = args['pkg_name']
         self.directory = os.path.normpath(args['directory'])
         
     def get(self):
+        pass
         #print self.__dict__
         # check if directory writeable
         # get ids and names of all resources
         # collect into basefilename -> list of ids
           # consider (rename) duplicate resource names
         # download & concatenate
-        
+
+def del_resources(args):
+    pkg_name = args['pkg_name']
+    conn = args['connection']
+    resources = args['resources']
+    check_package(conn, pkg_name)
+    pkg = conn.call_action('package_show', {'id': pkg_name})
+    allres = [(res['name'], res['id']) for res in pkg['resources']]
+    delids = [r[1] for r in allres if re.match(resources, r[0])]
+    for rid in delids:
+        print "DELETING Resources: {}".format(delres)
+        #c.call_action('resource_delete', {'id': rid})
+
+def check_package(args):
+    conn = args['connection']
+    pkgname = args['pkg_name']
+    pkgs = conn.call_action('package_list')
+    if pkgname not in pkgs:
+        sys.exit('No package "{}" found. Aborting.'.format(pkgname))
+    return pkgs
+    
 
 args = {'subcmd': 'get', 'pkg_name': 'test-the-bulk-upload',
         'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup/get',
@@ -310,24 +336,26 @@ args = {'subcmd': 'get', 'pkg_name': 'test-the-bulk-upload',
 if __name__ == '__main__':
     pa = Parser()
     args = pa.parse(sys.argv)
-    
-print "Arguments = {}".format(args)
+
 
 c = Connection(args).get_connection()
+args.update({'connection': c})
+print "Arguments = {}".format(args)
+
 if args['subcmd'] == 'put':
     put = Put(args)
     put.upload(c)
 if args['subcmd'] == 'get':
     get = Get(args)
     get.get()
-
-# put = Put(args)
-
-
-# if __name__ == '__main__':
-#     pass
+if args['subcmd'] == 'del':
+    del_resources(args)
+if args['subcmd'] == 'list':
+    print check_package(args)
     
 
+
+    
 
 
 # with open('/home/vonwalha/tmp/test_resup/metadata.yaml', 'r') as f:
