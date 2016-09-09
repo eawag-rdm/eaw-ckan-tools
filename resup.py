@@ -54,18 +54,21 @@
 ################################################################################
 
 import ckanapi
+import requests
 import argparse
 import hashlib
+import tarfile
 import time
+import gzip
+import shutil
+import uuid
 #from yaml import load as yload
+from pprint import pprint
 import re
 import sys
 import os
 import io
-import tarfile
-import gzip
-import shutil
-from pprint import pprint
+
 
 #HOST = 'http://localhost:5000'
 HOST = 'http://inf-vonwalha-pc.eawag.wroot.emp-eaw.ch:5000'
@@ -142,6 +145,13 @@ class Parser(object):
                         default=os.curdir,
                         help='Directory into which ressources are downloaded. ' +
                         'Default is the current working directory.')
+        
+        pa_get.add_argument('resources', metavar='RESOURCES', type=str, nargs='?',
+                        default='.*',
+                        help='The name of the resource to be downloaded or ' +
+                        'a regular expression that matches the resources ' +
+                        'to be downloaded, e.g. \".*\" (the default!)')
+   
 
         # list subcommand
         pa_list = subparsers.add_parser('list', help='list your packages',
@@ -154,8 +164,10 @@ class Parser(object):
                                        parents=[papa],
                                        description='Batch delete resoures of '+
                                        'a package in CKAN.')
+        
         pa_del.add_argument('pkg_name', metavar='PACKAGENAME', type=str,
                             help='Name of the data package')
+        
         pa_del.add_argument('resources', metavar='RESOURCES', type=str, nargs='?',
                             default='.*',
                             help='The name of the resource to be deleted or ' +
@@ -309,12 +321,122 @@ class Put(object):
                  
 class Get(object):
     def __init__(self, args):
-        check_package
+        self.conn = args['connection']
         self.pkg_name = args['pkg_name']
         self.directory = os.path.normpath(args['directory'])
-        
+        self.resources = args['resources']
+        self.partpatt = re.compile('^(?P<basename>.+)_part_(?P<idx>\d+)$')
+        self.downloaddict = {}
+        check_package(args)
+        self._checkdir()
+        try:
+            self.resources = re.compile(self.resources)
+        except:
+            print('It seems "{}" is not a valid regular expression.'
+                  .format(self.resources))
+            print('Aborting!')
+            sys.exit(1)
+
+
+    def _checkdir(self):
+        testfile =  os.path.join(self.directory,
+                                 'testwriteable_64747354612458526831012')
+        try:
+            with open(testfile, 'wb') as test:
+                test.write('0')
+        except:
+            sys.exit('Can\'t write in {}. Aborting.'.format(self.directory))
+        else:
+            os.remove(testfile)
+
+    def _getresources(self):
+        res = self.conn.call_action('package_show', {'id': self.pkg_name})
+        res = res.get('resources')
+        if not res:
+            print 'No resources in package {}. Aborting.'.format(self.pkg_name)
+            sys.exit(1)
+        return(res)
+
+    def _downloaddict(self, res):
+
+        for r in res:
+            resnew = {'url': r['url'], 'id': r['id'],
+                      'hash': r['hash'], 'idx': 0}
+            match = re.match(self.partpatt, r['name'])
+            if match:
+                basnam, idx = match.group(1, 2)
+                idx = int(idx)
+                resnew.update({'idx': idx})
+                if basnam in self.downloaddict:
+                    self.downloaddict[basnam].append(resnew)
+                else:
+                    self.downloaddict[basnam] = [resnew]
+            else:
+                if r['name'] in self.downloaddict:
+                    r['name'] += str(uuid.uuid4())
+                self.downloaddict[r['name']] = [resnew]
+                
+        for k in self.downloaddict.keys():
+            v = sorted(self.downloaddict[k],
+                       lambda x,y: x-y, lambda x: x.get('idx'))
+            self.downloaddict[k] = v
+
+    def _download(self):
+        for f_out_base in self.downloaddict.keys():
+            f_out = os.path.join(self.directory, f_out_base)
+            
+            if os.path.exists(f_out):
+                answer = raw_input('File {} exists. Overwrite? [Y/N] '
+                                   .format(file_out_base))
+                if answer not in ['y', 'Y', 'yes', 'Yes', 'YES']:
+                    sys.exit('aborted.')
+                else:
+                    os.remove(file_out)
+##############################   FIX FROM HERE #################################            
+            with io.open(f_out, mode='ab') as fout:
+                for partslist in self.downloaddict[f_out_base]:
+                    for part in partslist:
+                        r = requests.get(part['url'])
+                        instream = io.BytesIO(r.content)
+                        chunk = True
+                        sha = hashlib.sha256()
+                        while chunk:
+                            chunk = instream.read1(CHUNKSIZE)
+                            sha.update(chunk)
+                            fout.write(chunk)
+                        print "digest for {}:".format(url)
+                        print sha.hexdigest()
+
+    
     def get(self):
-        pass
+        print vars(self)
+        res = self._getresources()
+        print "Pattern: {}".format(self.resources)
+        res = [r for r in res if re.match(self.resources, r['name'])]
+        self._downloaddict(res)
+        self._download()
+        
+
+
+# if os.path.exists(file_out):
+#     answer = raw_input('File {} exists. Overwrite? [Y/N] '.format(file_out_base))
+#     if answer not in ['y', 'Y', 'yes', 'Yes', 'YES']:
+#         sys.exit('aborted.')
+#     else:
+#         os.remove(file_out)
+# with io.open(file_out, mode='ab') as fout:
+#     for url in files:
+#         r = requests.get(url)
+#         instream = io.BytesIO(r.content)
+#         chunk = True
+#         sha = hashlib.sha256()
+#         while chunk:
+#             chunk = instream.read1(CHUNKSIZE)
+#             sha.update(chunk)
+#             fout.write(chunk)
+#         print "digest for {}:".format(url)
+#         print sha.hexdigest()
+
         #print self.__dict__
         # check if directory writeable
         # get ids and names of all resources
@@ -365,8 +487,9 @@ def list_packages(args):
     
 
 
-args = {'subcmd': 'put', 'pkg_name': 'test-the-bulk-upload',
-        'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup',
+args = {'subcmd': 'get', 'pkg_name': 'test-the-bulk-upload',
+        'resources': '.*',
+        'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup/get',
         'tar': True, 'gz': True}
 
 if __name__ == '__main__':
@@ -383,7 +506,7 @@ if args['subcmd'] == 'put':
     put.upload()
 if args['subcmd'] == 'get':
     get = Get(args)
-    get.get()
+    #get.get()
 if args['subcmd'] == 'del':
     del_resources(args)
 if args['subcmd'] == 'list':
