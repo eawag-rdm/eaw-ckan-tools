@@ -110,7 +110,10 @@ class Parser(object):
         subparsers = self.pa.add_subparsers(help='subcommands', dest='subcmd')
         
         # put subcommand
-        pa_put = subparsers.add_parser('put', help='upload ressources', parents=[papa])
+        pa_put = subparsers.add_parser('put', help='upload ressources',
+                                       parents=[papa],
+                                       description='Upload a batch of files ' +
+                                       'as resources to CKAN.')
         pa_put.add_argument('pkg_name', metavar='PACKAGENAME', type=str,
                             help='Name of the data package')
   
@@ -128,7 +131,10 @@ class Parser(object):
                             'from package. The default is to delete it.')
         
         # get subcommand
-        pa_get = subparsers.add_parser('get', help='download ressources', parents=[papa])
+        pa_get = subparsers.add_parser('get', help='download ressources',
+                                       parents=[papa],
+                                       description='Bulk download '+
+                                       'resources of a package in CKAN.')
         pa_get.add_argument('pkg_name', metavar='PACKAGENAME', type=str,
                             help='Name of the data package')
   
@@ -138,10 +144,16 @@ class Parser(object):
                         'Default is the current working directory.')
 
         # list subcommand
-        pa_list = subparsers.add_parser('list', help='list your packages', parents=[papa])
+        pa_list = subparsers.add_parser('list', help='list your packages',
+                                        parents=[papa],
+                                        description='List the packages that '+
+                                        'you can modify.')
 
         # delete subcommand
-        pa_del = subparsers.add_parser('del', help='delete resources', parents=[papa])
+        pa_del = subparsers.add_parser('del', help='delete resources',
+                                       parents=[papa],
+                                       description='Batch delete resoures of '+
+                                       'a package in CKAN.')
         pa_del.add_argument('pkg_name', metavar='PACKAGENAME', type=str,
                             help='Name of the data package')
         pa_del.add_argument('resources', metavar='RESOURCES', type=str, nargs='?',
@@ -160,6 +172,7 @@ class Put(object):
     def __init__(self, args):
         self.pkg_name = args['pkg_name']
         self.directory = os.path.normpath(args['directory'])
+        self.connection = args['connection']
         self.gz = args['gz']
         self.tar = args['tar']
         self.keepdummy = args['keepdummy']
@@ -289,9 +302,9 @@ class Put(object):
         self._sha256()
         self._upload()
         if not self.keepdummy:
-            self.del_resources(self.connection, ['dummy'])
-
-
+            del_resources({'pkg_name': self.pkg_name,
+                           'connection': self.connection,
+                           'resources': 'dummy'})
 
                  
 class Get(object):
@@ -313,6 +326,13 @@ def del_resources(args):
     pkg_name = args['pkg_name']
     conn = args['connection']
     resources = args['resources']
+    try:
+        resources = re.compile(resources)
+    except:
+        print('It seems "{}" is not a valid regular expression.'
+              .format(resources))
+        print('Aborting!')
+        sys.exit(1)
     check_package(args)
     pkg = conn.call_action('package_show', {'id': pkg_name})
     allres = [(res['name'], res['id']) for res in pkg['resources']]
@@ -340,13 +360,14 @@ def list_packages(args):
                                               'rows': 1000,
                                               'include_private': True})['results']
     pkgs = [p['name'] for p in res]
-    pprint(pkgs)
+    for p in pkgs:
+        print p
     
 
 
-args = {'subcmd': 'get', 'pkg_name': 'test-the-bulk-upload',
-        'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup/get',
-        'tar': False, 'gz': False}
+args = {'subcmd': 'put', 'pkg_name': 'test-the-bulk-upload',
+        'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup',
+        'tar': True, 'gz': True}
 
 if __name__ == '__main__':
     pa = Parser()
@@ -359,7 +380,7 @@ print "Arguments = {}".format(args)
 
 if args['subcmd'] == 'put':
     put = Put(args)
-    put.upload(c)
+    put.upload()
 if args['subcmd'] == 'get':
     get = Get(args)
     get.get()
