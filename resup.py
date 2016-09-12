@@ -1,57 +1,4 @@
 #!/usr/bin/env python
-## Specification ###############################################################
-#
-# Input:
-# package-name
-# Directory
-
-# Options:
-#    -tar tar the directory-tree into one archive-file
-#         if not given, upload each file individually
-
-#    -gz  gzip each individual file first, in case it is not yet compressed
-#
-#    -get downloads ressources and assembles them if necessary
-#
-#
-#
-# Meta Data:
-# Default: name = filename
-# Notes, description = ''
-# The publication = 'no'
-# Resource Type = 'Compound' (tar) or 'Data_Set' (indiv. files)
-#
-# Functionality:
-# Override default metadata
-# Warn if a ressource is being replaced
-# Split file(s) if file is too large ( > 4GB ) in smaller chunks for upload.
-# Calculate hash digest
-# Remove ressource named "dummy"
-#
-# Read a definition-file in the given directory to:
-#    + select files using a regex
-#    + assign meta-data based on regex selection for individual fields
-# 
-#
-# CKAN TODO: Add ressource type: Compound (for tar archives with multiple types)
-#            Add meta-data to indicate a split ressource.
-#            Display file size in web-UI
-#
-#
-# Extra functions:
-# + list my packages
-# + simple search in my packages
-#
-#
-### "Override Metadata" functionality:   #######################################
-#
-# provide a file in the (top level) directory
-# YAML - format
-# selector as regex (applied to filenames)
-# overwrite datum: value
-#
-# For tar-archive: no selector accepted
-################################################################################
 
 import ckanapi
 import requests
@@ -62,18 +9,14 @@ import time
 import gzip
 import shutil
 import uuid
-#from yaml import load as yload
-from pprint import pprint
 import re
 import sys
 import os
 import io
+import stat
 
-
-#HOST = 'http://localhost:5000'
-HOST = 'http://inf-vonwalha-pc.eawag.wroot.emp-eaw.ch:5000'
-MAXFILESIZE = 10 * 2**20 # max filesize: 10Mb
-#MAXFILESIZE = 4 * 2**30 # max filesize: 4Gb
+HOST = 'https://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch'
+MAXFILESIZE = 4 * 2**30 # max filesize: 4Gb
 CHUNKSIZE = 4 * 2**10   # for tuning
 
 class Connection(object):
@@ -126,12 +69,21 @@ class Parser(object):
                             'to be uploaded. Default is the current working ' +
                             'directory. Subdirectories are ignored.')
 
-
+        pa_put.add_argument('--maxfilesize', type=float, metavar='MAXFILESIZE',
+                            help='Maximum filesize (in bytes) for upload. Larger files ' +
+                            'will be split into parts <= MAXFILESIZE. ' +
+                            'The default is {} Mb.'.format(MAXFILESIZE / 2**20),
+                            default=MAXFILESIZE)
+        
         pa_put.add_argument('--tar', action='store_true', help='create a tar archive')
         pa_put.add_argument('--gz', action='store_true', help='gzip the file(s) before upload')
         pa_put.add_argument('--keepdummy', action='store_true',
                             help='do not delete the ressource \'dummy\', if present, '+
                             'from package. The default is to delete it.')
+        pa_put.add_argument('--noclean', action='store_true', help='Keep the ' +
+                            'various temporary directories and files ' +
+                            'potentially created (e.g. "_tar", "_gz"). ' +
+                            'Default is to delete them.')
         
         # get subcommand
         pa_get = subparsers.add_parser('get', help='download ressources',
@@ -178,16 +130,20 @@ class Parser(object):
         arguments = vars(self.pa.parse_args())
         return arguments
 
+# ### END of Parser() ##########################################
 
 class Put(object):
     
     def __init__(self, args):
         self.pkg_name = args['pkg_name']
         self.directory = os.path.normpath(args['directory'])
+        self._checkdir()
         self.connection = args['connection']
         self.gz = args['gz']
         self.tar = args['tar']
+        self.maxsize = args['maxfilesize']
         self.keepdummy = args['keepdummy']
+        self.noclean = args['noclean']
         allfiles = [os.path.normpath(os.path.join(self.directory, f))
                     for f in os.listdir(self.directory)
                     if os.path.isfile(os.path.normpath(
@@ -198,6 +154,12 @@ class Put(object):
                               if re.match('.*\.(yaml|yml)', f)]
         self.metadata = {f: self._mk_meta_default(f) for f in self.resourcefiles}
         self.partfiles = {}
+
+    def _checkdir(self):
+        if os.path.exists(self.directory):
+                return()
+        print 'Upload directory {} doesn\'t exist.Aborting.'.format(self.directory)
+        sys.exit(1)
 
     def _mk_meta_default(self, fn):
         default_meta = {
@@ -235,14 +197,13 @@ class Put(object):
                 self.metadata[fpart]['name'] = os.path.basename(fpart)
             del self.metadata[filename]
 
-        maxsize = MAXFILESIZE
         chunksize = CHUNKSIZE
         partsdir = os.path.join(self.directory, '_parts')
         if not os.path.exists(partsdir):
             os.mkdir(partsdir)
         
         for filename in [f for f in self.metadata.keys()
-                         if os.stat(f).st_size > maxsize]:
+                         if os.stat(f).st_size > self.maxsize]:
             print "splitting {}".format(filename)
             cur_partsfile = newpartsfile(None, 0)
             cur_size = 0
@@ -250,7 +211,7 @@ class Put(object):
             with open(filename, 'rb') as f:
                 for chunk in iter(lambda: f.read(chunksize), b''):
                     cur_size += chunksize
-                    if cur_size > maxsize:
+                    if cur_size > self.maxsize:
                         count += 1
                         cur_partsfile = newpartsfile(cur_partsfile, count)
                         cur_size = chunksize
@@ -302,8 +263,17 @@ class Put(object):
         for res in sorted(self.metadata.keys()):
             self.metadata[res]['size'] = os.stat(res).st_size
             print "uploading {} ({})".format(res, self.metadata[res]['size'])
+            print self.metadata[res]
             self.connection.call_action('resource_create', self.metadata[res],
                                 files={'upload': open(res, 'rb')})
+
+    def _clean(self):
+        if self.noclean:
+            return()
+        for d in [os.path.join(self.directory, tmp)
+                  for tmp in ['_gz', '_parts', '_tar']]:
+            if os.path.exists(d):
+                shutil.rmtree(d)
 
     def upload(self):
         if self.gz:
@@ -317,7 +287,9 @@ class Put(object):
             del_resources({'pkg_name': self.pkg_name,
                            'connection': self.connection,
                            'resources': 'dummy'})
+        self._clean()
 
+# ### END of Put() ##########################################
                  
 class Get(object):
     def __init__(self, args):
@@ -357,11 +329,16 @@ class Get(object):
             sys.exit(1)
         return(res)
 
+    def _filterresources(self, res):
+        res1 = [r for r in res if re.match(self.resources, r['name'])]
+        return(res1)
+        
+
     def _downloaddict(self, res):
 
         for r in res:
-            resnew = {'url': r['url'], 'id': r['id'],
-                      'hash': r['hash'], 'idx': 0}
+            resnew = {'url': r.get('url'), 'id': r.get('id'),
+                      'hash': r.get('hash'), 'idx': 0}
             match = re.match(self.partpatt, r['name'])
             if match:
                 basnam, idx = match.group(1, 2)
@@ -382,67 +359,71 @@ class Get(object):
             self.downloaddict[k] = v
 
     def _download(self):
+
+        def existingfile(path, name):
+            if os.path.exists(path):
+                answer = raw_input('File {} exists. Overwrite? [Y/N] '
+                                   .format(path))
+                if answer not in ['y', 'Y', 'yes', 'Yes', 'YES']:
+                    print 'Skipping download of {}'.format(name)
+                    return True
+                else:
+                    os.remove(path)
+                    return False
+
+        def dl_part(fout, part):
+            r = requests.get(part['url'],
+                             headers={'X-CKAN-API-Key': self.conn.apikey})
+            instream = io.BytesIO(r.content)
+            chunk = True
+            sha = hashlib.sha256()
+            while chunk:
+                chunk = instream.read1(CHUNKSIZE)
+                sha.update(chunk)
+                fout.write(chunk)
+            return(sha.hexdigest())
+
+        def validate_part(digest, part, partbase):
+            if digest != part['hash']:
+                print 'Checksum validation failed for {}.'.format(partbase)
+                print digest
+                print part['hash']
+                ans = raw_input('Retry download? [Y/N] ')
+                if ans in ['y', 'Y', 'yes', 'Yes', 'YES']:
+                    return True
+                else:
+                    print 'Ignoring failed download of {}!'.format(partbase)
+                    return False
+            else:
+                print 'Checksum validation for {} passed.'.format(partbase)
+                return False
+        
         for f_out_base in self.downloaddict.keys():
             f_out = os.path.join(self.directory, f_out_base)
-            
-            if os.path.exists(f_out):
-                answer = raw_input('File {} exists. Overwrite? [Y/N] '
-                                   .format(file_out_base))
-                if answer not in ['y', 'Y', 'yes', 'Yes', 'YES']:
-                    sys.exit('aborted.')
-                else:
-                    os.remove(file_out)
-##############################   FIX FROM HERE #################################            
-            with io.open(f_out, mode='ab') as fout:
-                for partslist in self.downloaddict[f_out_base]:
-                    for part in partslist:
-                        r = requests.get(part['url'])
-                        instream = io.BytesIO(r.content)
-                        chunk = True
-                        sha = hashlib.sha256()
-                        while chunk:
-                            chunk = instream.read1(CHUNKSIZE)
-                            sha.update(chunk)
-                            fout.write(chunk)
-                        print "digest for {}:".format(url)
-                        print sha.hexdigest()
+            if existingfile(f_out, f_out_base):
+                continue
 
-    
+            with io.open(f_out, mode='ab') as fout:
+                idx = 0
+                while idx < len(self.downloaddict[f_out_base]):
+                    part = self.downloaddict[f_out_base][idx]
+                    partbase = os.path.basename(part['url'])
+                    print 'Downloading {} ...'.format(partbase)
+                    digest = dl_part(fout, part)
+                    if validate_part(digest, part, partbase) :
+                        continue
+                    else:
+                        idx += 1
+      
     def get(self):
-        print vars(self)
+        #print vars(self)
         res = self._getresources()
-        print "Pattern: {}".format(self.resources)
-        res = [r for r in res if re.match(self.resources, r['name'])]
+        res = self._filterresources(res)
+        print "Pattern: {}".format(self.resources.pattern)
         self._downloaddict(res)
         self._download()
         
-
-
-# if os.path.exists(file_out):
-#     answer = raw_input('File {} exists. Overwrite? [Y/N] '.format(file_out_base))
-#     if answer not in ['y', 'Y', 'yes', 'Yes', 'YES']:
-#         sys.exit('aborted.')
-#     else:
-#         os.remove(file_out)
-# with io.open(file_out, mode='ab') as fout:
-#     for url in files:
-#         r = requests.get(url)
-#         instream = io.BytesIO(r.content)
-#         chunk = True
-#         sha = hashlib.sha256()
-#         while chunk:
-#             chunk = instream.read1(CHUNKSIZE)
-#             sha.update(chunk)
-#             fout.write(chunk)
-#         print "digest for {}:".format(url)
-#         print sha.hexdigest()
-
-        #print self.__dict__
-        # check if directory writeable
-        # get ids and names of all resources
-        # collect into basefilename -> list of ids
-          # consider (rename) duplicate resource names
-        # download & concatenate
+# ### END of Get() ##########################################
 
 def del_resources(args):
     pkg_name = args['pkg_name']
@@ -464,12 +445,11 @@ def del_resources(args):
         c.call_action('resource_delete', {'id': r[1]})
 
 def check_package(args):
-    conn = args['connection']
-    pkgname = args['pkg_name']
-    pkgs = conn.call_action('package_list')
-    if pkgname not in pkgs:
-        sys.exit('No package "{}" found. Aborting.'.format(pkgname))
-
+    if args['pkg_name'] in list_packages(args):
+        return()
+    else:
+        sys.exit('No modifyable package "{}" found. Aborting.'
+                 .format(args['pkg_name']))
 
 def list_packages(args):
     conn = args['connection']
@@ -482,77 +462,33 @@ def list_packages(args):
                                               'rows': 1000,
                                               'include_private': True})['results']
     pkgs = [p['name'] for p in res]
-    for p in pkgs:
-        print p
-    
+    return(pkgs)
 
 
-args = {'subcmd': 'get', 'pkg_name': 'test-the-bulk-upload',
-        'resources': '.*',
-        'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup/get',
-        'tar': True, 'gz': True}
+# args = {'subcmd': 'put', 'pkg_name': 'test-the-bulk-upload',
+#         'resources': '.*',
+#         'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup/get',
+#         'tar': True, 'gz': True, 'maxfilesize': 70000000, 'noclean': False}
 
 if __name__ == '__main__':
     pa = Parser()
     args = pa.parse(sys.argv)
+    c = Connection(args).get_connection()
+    args.update({'connection': c})
+    #print "Arguments = {}".format(args)
+
+    if args['subcmd'] == 'put':
+        put = Put(args)
+        put.upload()
+    if args['subcmd'] == 'get':
+        get = Get(args)
+        get.get()
+    if args['subcmd'] == 'del':
+        del_resources(args)
+    if args['subcmd'] == 'list':
+        pkgnames = list_packages(args)
+        for p in pkgnames:
+            print p
 
 
-c = Connection(args).get_connection()
-args.update({'connection': c})
-print "Arguments = {}".format(args)
-
-if args['subcmd'] == 'put':
-    put = Put(args)
-    put.upload()
-if args['subcmd'] == 'get':
-    get = Get(args)
-    #get.get()
-if args['subcmd'] == 'del':
-    del_resources(args)
-if args['subcmd'] == 'list':
-    list_packages(args)
-    
-
-
-    
-
-
-# with open('/home/vonwalha/tmp/test_resup/metadata.yaml', 'r') as f:
-#     test = yload(f)
-
-# def split_file(filename, maxsize):
-#     partsdir = '/home/vonwalha/tmp/test_resup/parts'
-#     chunksize = 4 * 1024
-#     if not os.path.exists(partsdir):
-#         os.mkdir(partsdir)
-#     count = 0
-
-#     def newpartsfile(oldfile, count):
-#         if oldfile:
-#             oldfile.close()
-#         partsname = os.path.join(partsdir,
-#                                  os.path.basename(filename) +
-#                                  '_part_{:0=4}'.format(count))
-#         fpart = open(partsname, 'wb')
-#         print "partsname is {}".format(partsname)
-#         return(fpart)
-
-#     cur_partsfile = newpartsfile(None, 0)
-#     cur_size = 0
-#     count = 0
-#     with open(filename, 'rb') as f:
-#         for chunk in iter(lambda: f.read(chunksize), b''):
-#             cur_size += chunksize
-#             if cur_size > maxsize:
-#                 count += 1
-#                 cur_partsfile = newpartsfile(cur_partsfile, count)
-#                 cur_size = chunksize
-#             cur_partsfile.write(chunk)
-
-# filename = '/home/vonwalha/tmp/test_resup/5000M.test'
-# maxsize = 2 * 2**30
-# for chunksize in [1024, 2048, 4*1024, 8*1024, 1024*1024]:
-#     t0 = time.time()
-#     split_file(filename, maxsize, chunksize)
-#     print "chunksize: {} -- time: {}".format(chunksize, time.time()-t0)
 
