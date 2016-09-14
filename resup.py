@@ -39,11 +39,34 @@ class Connection(object):
     
 class Parser(object):
     def __init__(self):
-        self.pa = argparse.ArgumentParser(description='Batch upload of ressources '+
-                        'to a data package in CKAN',
-                        epilog=os.path.basename(sys.argv[0]) +
-                        ' {put | get | list} -h for specific help on subcommands.')
+        self.pa = argparse.ArgumentParser(
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description=
+"""
+Batch upload of resources to data package in CKAN.
+Batch download and deletion from data package in CKAN.
 
+{} handles compression, creation of a tar-archive,
+checksumming, splitting of large files for upload, and
+re-assemblage of thusly splitted files upon download.
+
+Resources to be downloaded or deleted can be specified
+by providing a regular expression to select resource names.
+""".format(os.path.basename(sys.argv[0])),
+            epilog=
+"""
+{} {{put | get | list | del}} -h for specific help on subcommands.
+
+The package has to exist already. If it doesn't,
+create one using the web-interface. You can\'t create
+a package without resources through the web-interface.
+You might want to create a resource with name "dummy"
+(and enter anything after clicking on "Link"). This
+resource will be deleted once the real resources have
+been uploaded.
+ 
+""".format(os.path.basename(sys.argv[0]))
+            )
         # parent parser (common arguments for all subcommands)
         papa = argparse.ArgumentParser(add_help=False)
         papa.add_argument('-s', type=str, metavar='SERVER', nargs=1,
@@ -69,14 +92,15 @@ class Parser(object):
                             'to be uploaded. Default is the current working ' +
                             'directory. Subdirectories are ignored.')
 
+        pa_put.add_argument('--tar', action='store_true', help='create a tar archive')
+        pa_put.add_argument('--gz', action='store_true', help='gzip the file(s) before upload')
+
         pa_put.add_argument('--maxfilesize', type=float, metavar='MAXFILESIZE',
                             help='Maximum filesize (in bytes) for upload. Larger files ' +
                             'will be split into parts <= MAXFILESIZE. ' +
                             'The default is {} Mb.'.format(MAXFILESIZE / 2**20),
                             default=MAXFILESIZE)
         
-        pa_put.add_argument('--tar', action='store_true', help='create a tar archive')
-        pa_put.add_argument('--gz', action='store_true', help='gzip the file(s) before upload')
         pa_put.add_argument('--keepdummy', action='store_true',
                             help='do not delete the ressource \'dummy\', if present, '+
                             'from package. The default is to delete it.')
@@ -465,17 +489,11 @@ def list_packages(args):
     return(pkgs)
 
 
-# args = {'subcmd': 'put', 'pkg_name': 'test-the-bulk-upload',
-#         'resources': '.*',
-#         'keepdummy': False, 'directory': os.environ['HOME']+'/tmp/test_resup/get',
-#         'tar': True, 'gz': True, 'maxfilesize': 70000000, 'noclean': False}
-
 if __name__ == '__main__':
     pa = Parser()
     args = pa.parse(sys.argv)
     c = Connection(args).get_connection()
     args.update({'connection': c})
-    #print "Arguments = {}".format(args)
 
     if args['subcmd'] == 'put':
         put = Put(args)
@@ -489,6 +507,4 @@ if __name__ == '__main__':
         pkgnames = list_packages(args)
         for p in pkgnames:
             print p
-
-
 
