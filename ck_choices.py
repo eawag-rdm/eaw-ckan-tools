@@ -126,7 +126,6 @@ def main():
     schema = load_schema(LOCAL_SCHEMA)
     parser = mkparser()
     params = vars(parser.parse_args())
-    print params
     terms = postparse(params, parser)
     if params['listfields']:
         listfields(schema)
