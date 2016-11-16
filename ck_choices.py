@@ -5,12 +5,10 @@ makes modifications to the controlled vocabulary (implemented as
 ckanext-scheming "choices")
 HvW - 2016-06-07
 """
-
-import ckanapi
+from pprint import pprint
 import argparse
 import sys
 import json
-import pprint
 import os
 
 LOCAL_SCHEMA=("/usr/lib/ckan/default/src/ckanext-eaw_schema/ckanext/" +
@@ -32,20 +30,33 @@ ck_choices.py variables --del new_var_1 newvar2
 deletes them.
 """
     )
-    parser.add_argument('field', help='the schema field to be modified',
+    parser.add_argument('field', nargs='?', help='the schema field to be modified',
                         metavar='FIELD')
+    parser.add_argument('--listfields', action='store_true', help='list fields'+\
+                        ' (the rest of the command line is ignored)')
     parser.add_argument('--del', action='store_true', help='delete terms '+
                         '(default is adding terms)')
     parser.add_argument('--resource', action='store_true', help='action ' +
                         'refers to resource field (default is dataset field)') 
-    parser.add_argument('terms', nargs='+', help='the terms to be added '
+    parser.add_argument('terms', nargs='*', help='the terms to be added '
                         +'(removed). Have the format "value,label" for adding,' +
                         ' and "value" for removing', metavar='TERM')
     return(parser)
 
+def listfields(schema):
+    fields = schema['dataset_fields']
+    for f in ('{}, {}\n{}\n'.format(x['field_name'], x['label'],
+                                    [c['value'] for c in x['choices']])
+              for x in fields if 'choices' in x):
+        print f
 
 def postparse(params, parser):
+    if params['listfields']:
+        return
     terms = params['terms']
+    if not terms or not params['field']:
+        parser.print_help()
+        sys.exit(1)
     terms = [tuple(x.split(',')) for x in terms]
     if params['del'] and not all([len(x) == 1 for x in terms]):
         parser.print_help()
@@ -112,13 +123,17 @@ def write_schema(newschema, path):
         json.dump(newschema, f, indent=2)
         
 def main():
+    schema = load_schema(LOCAL_SCHEMA)
     parser = mkparser()
     params = vars(parser.parse_args())
+    print params
     terms = postparse(params, parser)
+    if params['listfields']:
+        listfields(schema)
+        sys.exit()
     field = params['field']
     remove = params['del']
     typ = 'resource_fields' if params['resource'] else 'dataset_fields'
-    schema = load_schema(LOCAL_SCHEMA)
     newschema = update_field(schema, typ, field, remove, terms)
     write_schema(newschema, LOCAL_SCHEMA)
 
