@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+#_*_ coding: utf-8 _*_
+
+"""Usage: ck-purge_user [--with_ldap_user] [--host=HOST] [--dbname=DBNAME] [--dbuser=DBUSER] DBPASS USER
+          ck-purge_user -h|--help
+
+Arguments:
+  --host HOST      Hostname that runs the database [default: localhost].
+  --dbname DBNAME  Name of the database [default: ckan_default].
+  --dbuser DBUSER  Username for database connection [default: ckan_default].
+  DBPASS           Password for database user.
+  USER             Username to purge.
+
+Options:
+  -h, --help        This help.
+  --with_ldap_user  Also purge USER if it is an ldap-authorized user.
+
+"""
+
+from docopt import docopt
+import os
+import psycopg2
+
+
+def dbconnect(a):
+    print(a)
+    conn = psycopg2.connect(dbname=a['--dbname'], user=a['--dbuser'],
+                            password=a['DBPASS'], host=a['--host'])
+    cur = conn.cursor()
+    return cur
+
+def check_ldap_user(cursor):
+    """Checks whether table "ldap_user" exists at all"""
+    cursor.execute("""SELECT * FROM information_schema.tables
+    WHERE table_name = 'ldap_user';""")
+    res = cursor.fetchall()
+    return True if res else False
+    
+
+def check_user(user, cursor, ldap=False):
+    """Checks whether user exists in db. For table='ldap_user', checks
+    ldap_id in table ldap_user.
+
+    """
+    if ldap:
+        hasldap = check_ldap_user(cursor)
+        if not hasldap:
+            raise Exception('ckanext-ldap not installed (no table "ldap_user")')
+        
+    params = {'table': 'public.user' if not ldap else 'ldap_user',
+              'field': 'name' if not ldap else 'ldap_id',
+              'user': user}
+    qs = """select {field} from {table}  
+    where {field} = %(user)s;""".format(**params)
+    cursor.execute(qs, params)
+    res = cursor.fetchall()
+    return True if res else False
+    
+    
+def main():
+    print(arguments)
+
+
+if __name__ == '__main__':
+    arguments = docopt(doc=__doc__)
+    c = dbconnect(arguments)
+    print(check_user('bihn', c, ldap=False))
+#    print(check_user('bihn', c, ldap=True))
+    print(check_user('vonwalha', c, ldap=False))
+ #   print(check_user('vonwalha', c, ldap=True))
+    
