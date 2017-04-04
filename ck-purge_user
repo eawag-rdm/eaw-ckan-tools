@@ -2,7 +2,12 @@
 #_*_ coding: utf-8 _*_
 
 """Usage: ck-purge_user [--with_ldap_user] [--host=HOST] [--dbname=DBNAME] [--dbuser=DBUSER] DBPASS USER
+          ck-purge_user check [--host=HOST] [--dbname=DBNAME] [--dbuser=DBUSER] DBPASS USER
           ck-purge_user -h|--help
+
+The first form removes USER from the DB.
+The second form returns 'ckan', 'ldap' or 'False', if user is a local user,
+and LDAP-user or doesn't exist, respectively.
 
 Arguments:
   --host HOST      Hostname that runs the database [default: localhost].
@@ -20,32 +25,37 @@ Options:
 from docopt import docopt
 import os
 import psycopg2
+import logging
 
+logging.basicConfig(level=logging.INFO)
 
 def dbconnect(a):
-    print(a)
     conn = psycopg2.connect(dbname=a['--dbname'], user=a['--dbuser'],
                             password=a['DBPASS'], host=a['--host'])
-    cur = conn.cursor()
-    return cur
 
-def check_ldap_user(cursor):
+    return conn
+
+def check_ldap_user(conn):
     """Checks whether table "ldap_user" exists at all"""
+    cursor = conn.cursor()
     cursor.execute("""SELECT * FROM information_schema.tables
     WHERE table_name = 'ldap_user';""")
     res = cursor.fetchall()
+    cursor.close()
     return True if res else False
     
 
-def check_user(user, cursor, ldap=False):
-    """Checks whether user exists in db. For table='ldap_user', checks
+def check_user(user, conn, ldap=False):
+    """Checks whether user exists in db. For ldap=True, checks
     ldap_id in table ldap_user.
 
     """
+    cursor = conn.cursor()
     if ldap:
-        hasldap = check_ldap_user(cursor)
+        hasldap = check_ldap_user(conn)
         if not hasldap:
-            raise Exception('ckanext-ldap not installed (no table "ldap_user")')
+            logging.info('ckanext-ldap not installed (no table "ldap_user")')
+            return False
         
     params = {'table': 'public.user' if not ldap else 'ldap_user',
               'field': 'name' if not ldap else 'ldap_id',
@@ -54,18 +64,54 @@ def check_user(user, cursor, ldap=False):
     where {field} = %(user)s;""".format(**params)
     cursor.execute(qs, params)
     res = cursor.fetchall()
+    cursor.close()
     return True if res else False
-    
-    
-def main():
-    print(arguments)
 
+def purge_user(user, conn, ldap):
+    """Deletes user from database, but only if not ldap user.
+    Deletes also ldap users if ldap=True.
+
+    """
+    cursor = conn.cursor()
+    exists = check_user(user, conn, ldap=False)
+    if not exists:
+        logging.info("User {} doesn't exist - aborting.".format(user))
+        cursor.close()
+        return
+    isldap = check_user(user, conn, ldap=True)
+    if not isldap:
+        logging.info("Deleting user {}".format(user))
+        qs = "DELETE FROM public.user WHERE name = (%s);"
+        cursor.execute(qs, (user,))
+    elif not ldap:
+        logging.info("Ignoring LDAP-user {}".format(user))
+    else:
+        logging.info("Deleting LDAP-user {}".format(user))
+        qs = "DELETE FROM ldap_user WHERE ldap_id = (%s);"
+        cursor.execute(qs, (user, ))
+        qs = "DELETE FROM public.user WHERE name = (%s);"
+        cursor.execute(qs, (user, ))
+    conn.commit()
+    cursor.close()
+    
 
 if __name__ == '__main__':
     arguments = docopt(doc=__doc__)
-    c = dbconnect(arguments)
-    print(check_user('bihn', c, ldap=False))
-#    print(check_user('bihn', c, ldap=True))
-    print(check_user('vonwalha', c, ldap=False))
- #   print(check_user('vonwalha', c, ldap=True))
-    
+    conn = dbconnect(arguments)
+    print(arguments)
+    if not arguments['check']:
+        print("Purging ...")
+        purge_user(arguments['USER'], conn, arguments['--with_ldap_user'])
+        print("Checking ...")
+        print("User {} gone? {}".format(arguments['USER'],
+                                        not check_user(arguments['USER'], conn)))
+    else:
+        hasuser = check_user(arguments['USER'], conn, ldap=False)
+        if not hasuser:
+            print('false')
+        elif check_user(arguments['USER'], conn, ldap=True):
+            print('ldap')
+        else:
+            print('ckan')
+
+    conn.close()
