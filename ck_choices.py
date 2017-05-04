@@ -12,7 +12,7 @@ import json
 import os
 
 LOCAL_SCHEMA=("/usr/lib/ckan/default/src/ckanext-eaw_schema/ckanext/" +
-               "eaw_schema/eaw_schema_default.json")
+               "eaw_schema/eaw_schema_dataset.json")
     
 def mkparser():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
