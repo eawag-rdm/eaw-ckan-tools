@@ -54,10 +54,12 @@ def postparse(params, parser):
     if params['listfields']:
         return
     terms = params['terms']
+    print("terms: {}".format(terms))
     if not terms or not params['field']:
         parser.print_help()
         sys.exit(1)
     terms = [tuple(x.split(',')) for x in terms]
+    print("terms: {}".format(terms))
     if params['del'] and not all([len(x) == 1 for x in terms]):
         parser.print_help()
         sys.exit(1)
