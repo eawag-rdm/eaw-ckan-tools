@@ -46,7 +46,7 @@ deletes them.
 def listfields(schema):
     fields = schema['dataset_fields']
     for f in ('{}, {}\n{}\n'.format(x['field_name'], x['label'],
-                                    [c['value'] for c in x['choices']])
+                                    sorted([c['value'] for c in x['choices']]))
               for x in fields if 'choices' in x):
         print f
 
