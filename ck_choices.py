@@ -37,7 +37,9 @@ deletes them.
     parser.add_argument('--del', action='store_true', help='delete terms '+
                         '(default is adding terms)')
     parser.add_argument('--resource', action='store_true', help='action ' +
-                        'refers to resource field (default is dataset field)') 
+                        'refers to resource field (default is dataset field)')
+    parser.add_argument('--schema', action='store', help='path to alternative'
+                        + ' schema definition', metavar='SCHEMA')
     parser.add_argument('terms', nargs='*', help='the terms to be added '
                         +'(removed). Have the format "value,label" for adding,' +
                         ' and "value" for removing', metavar='TERM')
@@ -125,10 +127,11 @@ def write_schema(newschema, path):
         json.dump(newschema, f, indent=2)
         
 def main():
-    schema = load_schema(LOCAL_SCHEMA)
     parser = mkparser()
     params = vars(parser.parse_args())
     terms = postparse(params, parser)
+    schemasource = params.get('schema') or LOCAL_SCHEMA
+    schema = load_schema(schemasource)
     if params['listfields']:
         listfields(schema)
         sys.exit()
@@ -136,7 +139,7 @@ def main():
     remove = params['del']
     typ = 'resource_fields' if params['resource'] else 'dataset_fields'
     newschema = update_field(schema, typ, field, remove, terms)
-    write_schema(newschema, LOCAL_SCHEMA)
+    write_schema(newschema, schemasource)
 
 if __name__ == '__main__':
     main()
